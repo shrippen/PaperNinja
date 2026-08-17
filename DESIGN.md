@@ -116,9 +116,9 @@ Vorschau und direktem Verknüpfen.
 **Tastatur:** `j`/`k` zwischen Vorschlägen, `n` nächste Ausgabe/Beleg,
 `Enter` verknüpfen, `s` Suche öffnen, `/` Fokus Suche/Jahr, `?` Hilfe.
 
-**Marke:** App-Icon ist Variante D (Maske mit zwei Dokumenten) in Teal auf Cream.
-Favicon/`apple-touch-icon` unter `/static/`; README und GitHub-Social nutzen
-`docs/logo.png` bzw. `docs/social.png`.
+**Marke:** App-Icon ist Variante D (Maske mit zwei Dokumenten) in Teal,
+PNG mit Transparenz außerhalb der Form. Favicon/`apple-touch-icon` unter
+`/static/`; README und GitHub-Social nutzen `docs/logo.png` bzw. `docs/social.png`.
 
 Vorschau: Miniatur über den authentifizierten Proxy (`/preview/.../thumb`);
 ein Klick auf Thumbnail oder Titel öffnet die **Paperless-Detailseite**, nicht die
