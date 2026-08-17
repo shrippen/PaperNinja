@@ -1,0 +1,162 @@
+{% if error %}
+<div class="flash err">{{ error }}</div>
+{% endif %}
+
+{% if blocked %}
+<div class="flash warn">
+  Mapping unvollständig — <a href="/setup">Setup öffnen</a>.
+</div>
+{% else %}
+<p class="meta">
+  Jahr {{ year }} ·
+  {{ expense_count|default(0) }} unlinked Expenses ·
+  {{ document_count|default(0) }} unlinked Dokumente ·
+  Min-Score {{ settings.match_min_score }} ·
+  Datumsfenster ±{{ settings.match_date_window_days }} Tage
+  {% if combo %} · 1∶n Sammelbelege an{% endif %}
+</p>
+
+{% if not matches %}
+<div class="flash ok">Nichts Offenes für {{ year }} — oder keine Kandidaten über dem Min-Score.</div>
+{% endif %}
+
+{% for item in matches %}
+<article class="match-card kb-item">
+  <div class="expense">
+    <h2>
+      <a href="{{ settings.expense_url(item.expense.id) }}" target="_blank" rel="noopener">
+        {{ item.expense.number or item.expense.id }}
+      </a>
+    </h2>
+    <dl>
+      <div><dt>Betrag</dt><dd>{{ "%.2f"|format(item.expense.amount) }}</dd></div>
+      <div><dt>Datum</dt><dd>{{ item.expense.date or '—' }}</dd></div>
+      <div><dt>Vendor</dt><dd>{{ item.expense.vendor_name or '—' }}</dd></div>
+    </dl>
+  </div>
+  <div class="candidates">
+    {% if not item.candidates and not item.combos %}
+    <p class="muted">Keine Kandidaten ≥ Min-Score.</p>
+    {% endif %}
+    <button
+      type="button"
+      class="preset"
+      data-open-search
+      hx-get="/search"
+      hx-vals='{"expense_id": "{{ item.expense.id }}", "year": "{{ year }}", "preset": "around_date"}'
+      hx-target="#search-slot-{{ item.expense.id }}"
+      hx-swap="innerHTML"
+    >Dokument suchen</button>
+    <div id="search-slot-{{ item.expense.id }}"></div>
+    {% for combo_item in item.combos %}
+    <div class="candidate kb-item combo">
+      <div class="cand-head">
+        <span class="combo-badge">1∶n · {{ combo_item.documents|length }} Belege</span>
+        <span class="score" title="Gesamtscore">{{ combo_item.score }}</span>
+      </div>
+      <p class="muted">
+        Summe {{ "%.2f"|format(combo_item.sum_amount) }}
+        {% for amt in combo_item.amounts %}{% if not loop.first %} + {% endif %}{{ "%.2f"|format(amt) }}{% endfor %}
+      </p>
+      <div class="combo-thumbs">
+        {% for doc in combo_item.documents %}
+        <a class="thumb-link" href="{{ settings.document_url(doc.id) }}" target="_blank" rel="noopener" title="In Paperless öffnen">
+          <img class="thumb" src="/preview/{{ doc.id }}/thumb" alt="{{ doc.title or doc.id }}" loading="lazy" />
+        </a>
+        {% endfor %}
+      </div>
+      <ul class="combo-titles">
+        {% for doc in combo_item.documents %}
+        <li>
+          <a href="{{ settings.document_url(doc.id) }}" target="_blank" rel="noopener">{{ doc.title or ('#' ~ doc.id) }}</a>
+          <span class="muted">{{ "%.2f"|format(combo_item.amounts[loop.index0]) }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      <details class="score-details">
+        <summary>Warum diese Menge? ({{ combo_item.score }} / 100)</summary>
+        <ul class="factor-list">
+          {% for f in combo_item.factors %}
+          <li class="{% if f.matched %}hit{% else %}miss{% endif %}">
+            <div class="factor-head"><strong>{{ f.label }}</strong><span class="factor-pts">{{ f.points }} / {{ f.max_points }}</span></div>
+            <p>{{ f.detail }}</p>
+          </li>
+          {% endfor %}
+        </ul>
+      </details>
+      <form method="post" action="/link">
+        <input type="hidden" name="expense_id" value="{{ item.expense.id }}" />
+        <input type="hidden" name="document_ids" value="{% for doc in combo_item.documents %}{{ doc.id }}{% if not loop.last %},{% endif %}{% endfor %}" />
+        <input type="hidden" name="year" value="{{ year }}" />
+        <input type="hidden" name="return_to" value="match" />
+        <input type="hidden" name="combo" value="{% if combo %}1{% endif %}" />
+        <button type="submit">Alle verknüpfen</button>
+      </form>
+    </div>
+    {% endfor %}
+    {% for c in item.candidates %}
+    <div class="candidate kb-item">
+      <div class="cand-layout">
+        <a class="thumb-link"
+           href="{{ settings.document_url(c.document.id) }}"
+           target="_blank"
+           rel="noopener"
+           title="In Paperless öffnen">
+          <img
+            class="thumb"
+            src="/preview/{{ c.document.id }}/thumb"
+            alt="{{ c.document.title or c.document.id }}"
+            loading="lazy"
+          />
+        </a>
+        <div class="cand-body">
+          <div class="cand-head">
+            <a href="{{ settings.document_url(c.document.id) }}" target="_blank" rel="noopener">
+              {{ c.document.title or ('Dokument #' ~ c.document.id) }}
+            </a>
+            <span class="score" title="Gesamtscore">{{ c.score }}</span>
+          </div>
+          <p class="muted">
+            {{ c.document.correspondent_name or '—' }}
+            · {{ c.document.created_date or c.document.added or '—' }}
+          </p>
+
+          <details class="score-details" {% if loop.first %}open{% endif %}>
+            <summary>Warum dieser Vorschlag? ({{ c.score }} / 100)</summary>
+            <p class="score-intro">
+              Der Score addiert Punkte aus Betrag (max&nbsp;40), Datum (max&nbsp;25),
+              Vendor (max&nbsp;20) und Rechnungsnummer (max&nbsp;30), gedeckelt bei 100.
+              Angezeigt werden nur Treffer ≥ Min-Score {{ settings.match_min_score }}.
+            </p>
+            <ul class="factor-list">
+              {% for f in c.factors %}
+              <li class="{% if f.matched %}hit{% else %}miss{% endif %}">
+                <div class="factor-head">
+                  <strong>{{ f.label }}</strong>
+                  <span class="factor-pts">{{ f.points }} / {{ f.max_points }}</span>
+                </div>
+                <p>{{ f.detail }}</p>
+                <div class="factor-bar" aria-hidden="true">
+                  <span style="width: {{ (f.points / f.max_points * 100)|int }}%"></span>
+                </div>
+              </li>
+              {% endfor %}
+            </ul>
+          </details>
+
+          <form method="post" action="/link">
+            <input type="hidden" name="expense_id" value="{{ item.expense.id }}" />
+            <input type="hidden" name="document_id" value="{{ c.document.id }}" />
+            <input type="hidden" name="year" value="{{ year }}" />
+            <input type="hidden" name="return_to" value="match" />
+            <input type="hidden" name="combo" value="{% if combo %}1{% endif %}" />
+            <button type="submit">Verknüpfen</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</article>
+{% endfor %}
+{% endif %}

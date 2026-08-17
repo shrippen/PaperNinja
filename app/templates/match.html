@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Zu verknüpfen — PaperNinja{% endblock %}
+{% block content %}
+<section class="hero-block">
+  <h1>Zu verknüpfen</h1>
+  <p>Vorschläge für unlinked Invoice-Ninja-Ausgaben und Paperless-Belege. Bestätigen schreibt die Custom Fields beidseitig.</p>
+</section>
+
+{% if blocked %}
+<div class="flash warn">
+  Mapping oder API-Zugang unvollständig.
+  <a href="/setup">Setup / Felder öffnen</a> und ENV setzen.
+</div>
+{% else %}
+<div class="year-bar">
+  <label for="year">Jahr</label>
+  <select
+    name="year"
+    id="year"
+    hx-get="/match/results"
+    hx-target="#match-results"
+    hx-swap="innerHTML"
+    hx-indicator="#match-loading"
+    hx-trigger="change, load"
+    hx-include="#year, #combo"
+    hx-sync="#match-results:abort"
+  >
+    {% for y in years %}
+    <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+    {% endfor %}
+  </select>
+  <span class="muted">Nur Ausgaben mit Datum in diesem Jahr</span>
+  <label class="toggle" for="combo">
+    <input
+      type="checkbox"
+      name="combo"
+      id="combo"
+      value="1"
+      {% if combo %}checked{% endif %}
+      hx-get="/match/results"
+      hx-target="#match-results"
+      hx-swap="innerHTML"
+      hx-indicator="#match-loading"
+      hx-trigger="change"
+      hx-include="#year, #combo"
+      hx-sync="#match-results:abort"
+    />
+    1∶n Sammelbelege
+  </label>
+  <span class="muted">Standard aus — Summensuche, langsamer</span>
+</div>
+
+<div id="match-loading" class="loading-panel htmx-indicator" aria-live="polite">
+  <div class="loading-label" data-loading-label>Lade Ausgaben und Belege …</div>
+  <div class="progress-track" aria-hidden="true">
+    <div class="progress-bar"></div>
+  </div>
+</div>
+
+<div id="match-results" aria-live="polite"></div>
+
+<script>
+(function () {
+  function selectedYear() {
+    const el = document.getElementById("year");
+    return el ? el.value : "";
+  }
+
+  function comboOn() {
+    const combo = document.getElementById("combo");
+    return Boolean(combo && combo.checked);
+  }
+
+  function setLoadingLabel(year) {
+    const label = document.querySelector("[data-loading-label]");
+    if (!label) return;
+    const extra = comboOn() ? " inkl. 1∶n …" : " …";
+    label.textContent = year
+      ? "Lade Ausgaben und Belege für " + year + extra
+      : "Lade Ausgaben und Belege" + extra;
+  }
+
+  document.body.addEventListener("htmx:configRequest", function (event) {
+    const path = event.detail.path || "";
+    if (!path.includes("/match/results")) return;
+    const year = selectedYear();
+    event.detail.parameters.year = year;
+    event.detail.parameters.combo = comboOn() ? "1" : "";
+    setLoadingLabel(year);
+  });
+
+  document.body.addEventListener("htmx:beforeRequest", function (event) {
+    const path = (event.detail.pathInfo && event.detail.pathInfo.requestPath) || "";
+    if (!path.includes("/match/results")) return;
+    const results = document.getElementById("match-results");
+    if (results) {
+      results.innerHTML = "";
+      results.dataset.loadingYear = selectedYear();
+    }
+  });
+
+  document.body.addEventListener("htmx:afterSwap", function (event) {
+    if (event.detail.target && event.detail.target.id === "match-results") {
+      const year = selectedYear();
+      const url = new URL(window.location.href);
+      if (year) url.searchParams.set("year", year);
+      if (comboOn()) url.searchParams.set("combo", "1");
+      else url.searchParams.delete("combo");
+      const query = url.searchParams.toString();
+      history.replaceState(null, "", url.pathname + (query ? "?" + query : ""));
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

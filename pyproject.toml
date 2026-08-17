@@ -1,0 +1,40 @@
+[project]
+name = "paperninja"
+version = "0.1.0"
+description = "Match Invoice Ninja expenses with Paperless-ngx documents"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "httpx>=0.28.0",
+    "pydantic-settings>=2.6.0",
+    "jinja2>=3.1.4",
+    "python-multipart>=0.0.17",
+    "rapidfuzz>=3.10.0",
+    "argon2-cffi>=23.1.0",
+    "itsdangerous>=2.2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/shrippen/PaperNinja"
+Repository = "https://github.com/shrippen/PaperNinja"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=75.0.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]

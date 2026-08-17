@@ -1,0 +1,62 @@
+{% if error %}
+<div class="flash err">{{ error }}</div>
+{% elif not tag_ok %}
+<div class="flash warn">Tag „{{ settings.pl_reverse_queue_tag }}“ in Paperless nicht gefunden.</div>
+{% else %}
+<p class="meta">
+  Jahr {{ year }} · Tag {{ settings.pl_reverse_queue_tag }} ·
+  {{ document_count }} unlinked Belege · {{ expense_count }} unlinked Ausgaben
+</p>
+{% if not matches %}
+<div class="flash ok">Keine passenden Belege in diesem Jahr.</div>
+{% endif %}
+{% for item in matches %}
+<article class="match-card kb-item">
+  <div class="expense">
+    <a class="thumb-link" href="{{ settings.document_url(item.document.id) }}" target="_blank" rel="noopener" title="In Paperless öffnen">
+      <img class="thumb" src="/preview/{{ item.document.id }}/thumb" alt="" loading="lazy" />
+    </a>
+    <h2>
+      <a href="{{ settings.document_url(item.document.id) }}" target="_blank" rel="noopener">
+        {{ item.document.title or ('Dokument #' ~ item.document.id) }}
+      </a>
+    </h2>
+    <p class="muted">{{ item.document.correspondent_name or '—' }} · {{ item.document.created_date or '—' }}</p>
+  </div>
+  <div class="candidates">
+    {% if not item.candidates %}
+    <p class="muted">Keine Ausgaben ≥ Min-Score.</p>
+    {% endif %}
+    {% for expense, c in item.candidates %}
+    <div class="candidate kb-item">
+      <div class="cand-head">
+        <a href="{{ settings.expense_url(expense.id) }}" target="_blank" rel="noopener">
+          {{ expense.number or expense.id }}
+        </a>
+        <span class="score">{{ c.score }}</span>
+      </div>
+      <p class="muted">{{ expense.vendor_name or '—' }} · {{ expense.date or '—' }} · {{ "%.2f"|format(expense.amount) }}</p>
+      <details class="score-details">
+        <summary>Warum? ({{ c.score }} / 100)</summary>
+        <ul class="factor-list">
+          {% for f in c.factors %}
+          <li class="{% if f.matched %}hit{% else %}miss{% endif %}">
+            <div class="factor-head"><strong>{{ f.label }}</strong><span class="factor-pts">{{ f.points }} / {{ f.max_points }}</span></div>
+            <p>{{ f.detail }}</p>
+          </li>
+          {% endfor %}
+        </ul>
+      </details>
+      <form method="post" action="/link">
+        <input type="hidden" name="expense_id" value="{{ expense.id }}" />
+        <input type="hidden" name="document_id" value="{{ item.document.id }}" />
+        <input type="hidden" name="year" value="{{ year }}" />
+        <input type="hidden" name="return_to" value="queue" />
+        <button type="submit">Verknüpfen</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+</article>
+{% endfor %}
+{% endif %}

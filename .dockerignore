@@ -1,0 +1,15 @@
+.git
+.github
+.cursor
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.env
+*.md
+!README.md
+tests
+.gitignore
+data
+start.sh

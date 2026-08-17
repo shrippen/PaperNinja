@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Setup / Felder — PaperNinja{% endblock %}
+{% block content %}
+<section class="hero-block">
+  <h1>Setup / Felder</h1>
+  <p>
+    PaperNinja speichert kein Mapping. Trage die Werte in deine <code>.env</code> ein
+    und starte den Container neu. Diese Seite zeigt live die Felder beider Dienste
+    und welche ENV-Variable du setzen musst.
+  </p>
+</section>
+
+{% if mapping_complete %}
+<div class="flash ok">Pflicht-Mapping ist gesetzt — Matching ist nutzbar.</div>
+{% else %}
+<div class="flash warn">Pflicht-Mapping unvollständig. Siehe aktuelle ENV unten.</div>
+{% endif %}
+
+<section class="grid-2">
+  <article>
+    <h2>Invoice Ninja — Expense Custom Fields</h2>
+    <p class="status status-{{ in_status }}">
+      Status:
+      {% if in_status == 'ok' %}verbunden
+      {% elif in_status == 'error' %}Fehler
+      {% else %}URL/Token fehlen{% endif %}
+    </p>
+    {% if in_error %}<pre class="errbox">{{ in_error }}</pre>{% endif %}
+    {% if in_fields %}
+    <table>
+      <thead>
+        <tr>
+          <th>Label</th>
+          <th>Slot</th>
+          <th>ENV setzen</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in in_fields %}
+        <tr>
+          <td><strong>{{ f.label }}</strong></td>
+          <td><code>{{ f.slot }}</code></td>
+          <td>
+            <ul class="envlist">
+              {% for line in f.env_candidates %}
+              <li><code class="copy">{{ line }}</code></li>
+              {% endfor %}
+            </ul>
+            <p class="hint">
+              Rechnungsnummer → <code>IN_EXPENSE_FIELD_INVOICE_NUMBER</code><br />
+              Paperless URL → <code>IN_EXPENSE_FIELD_PAPERLESS_URL</code>
+            </p>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% elif in_status == 'ok' %}
+    <p>Keine Custom-Field-Labels gefunden (Slots existieren trotzdem als custom_value1–4).</p>
+    {% endif %}
+  </article>
+
+  <article>
+    <h2>Paperless-ngx — Custom Fields</h2>
+    <p class="status status-{{ pl_status }}">
+      Status:
+      {% if pl_status == 'ok' %}verbunden
+      {% elif pl_status == 'error' %}Fehler
+      {% else %}URL/Token fehlen{% endif %}
+    </p>
+    {% if pl_error %}<pre class="errbox">{{ pl_error }}</pre>{% endif %}
+    {% if pl_fields %}
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>ID</th>
+          <th>Typ</th>
+          <th>ENV setzen</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in pl_fields %}
+        <tr>
+          <td><strong>{{ f.name }}</strong></td>
+          <td><code>{{ f.id }}</code></td>
+          <td>{{ f.data_type }}</td>
+          <td>
+            <ul class="envlist">
+              {% for line in f.env_candidates %}
+              <li><code class="copy">{{ line }}</code></li>
+              {% endfor %}
+            </ul>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </article>
+</section>
+
+<section>
+  <h2>Aktuell geladene ENV</h2>
+  <table>
+    <thead>
+      <tr><th>Variable</th><th>Wert</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      {% for key, value in env_snapshot.items() %}
+      <tr>
+        <td><code>{{ key }}</code></td>
+        <td>{% if value is none or value == '' %}<em>nicht gesetzt</em>{% else %}<code>{{ value }}</code>{% endif %}</td>
+        <td>
+          {% if value is none or value == '' %}
+            {% if key == 'PL_FIELD_AMOUNT' %}<span class="badge">optional</span>{% else %}<span class="badge bad">fehlt</span>{% endif %}
+          {% else %}<span class="badge ok">ok</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

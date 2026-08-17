@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Belege zuerst — PaperNinja{% endblock %}
+{% block content %}
+<section class="hero-block">
+  <h1>Belege zuerst</h1>
+  <p>Unlinked Paperless-Dokumente mit Tag <code>{{ settings.pl_reverse_queue_tag or '(nicht gesetzt)' }}</code>, dazu passende Ausgaben.</p>
+</section>
+
+{% if not settings.pl_reverse_queue_tag %}
+<div class="flash warn">
+  Setze <code>PL_REVERSE_QUEUE_TAG</code> auf den Paperless-Tag-Namen (oder die ID) und starte neu.
+  Hinweis steht auch unter <a href="/setup">Setup / Felder</a>.
+</div>
+{% else %}
+<div class="year-bar">
+  <label for="year">Jahr</label>
+  <select
+    name="year"
+    id="year"
+    hx-get="/queue/results"
+    hx-target="#queue-results"
+    hx-swap="innerHTML"
+    hx-indicator="#queue-loading"
+    hx-trigger="change, load"
+    hx-include="this"
+    hx-sync="#queue-results:abort"
+  >
+    {% for y in years %}
+    <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+    {% endfor %}
+  </select>
+</div>
+<div id="queue-loading" class="loading-panel htmx-indicator">
+  <div class="loading-label">Lade Belege …</div>
+  <div class="progress-track"><div class="progress-bar"></div></div>
+</div>
+<div id="queue-results" aria-live="polite"></div>
+{% endif %}
+{% endblock %}

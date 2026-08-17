@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Verknüpft — PaperNinja{% endblock %}
+{% block content %}
+<section class="hero-block">
+  <h1>Verknüpft</h1>
+  <p>
+    {% if source == 'session' %}
+    Paare aus dieser Sitzung. Entkoppeln leert die Cross-Link-Felder in beiden Systemen.
+    {% else %}
+    Keine Links in dieser Sitzung — Anzeige nach letzter Änderung in Invoice Ninja / Paperless.
+    {% endif %}
+  </p>
+</section>
+
+{% if not pairs %}
+<div class="flash ok">Keine verknüpften Paare gefunden.</div>
+{% endif %}
+
+{% for pair in pairs %}
+<article class="match-card kb-item">
+  <div class="expense">
+    <h2>
+      <a href="{{ settings.expense_url(pair.expense.id) }}" target="_blank" rel="noopener">
+        {{ pair.expense.number or pair.expense.id }}
+      </a>
+    </h2>
+    <dl>
+      <div><dt>Betrag</dt><dd>{{ "%.2f"|format(pair.expense.amount) }}</dd></div>
+      <div><dt>Datum</dt><dd>{{ pair.expense.date or '—' }}</dd></div>
+      <div><dt>Vendor</dt><dd>{{ pair.expense.vendor_name or '—' }}</dd></div>
+      {% if pair.linked_at %}
+      <div><dt>Verknüpft</dt><dd>{{ pair.linked_at }}</dd></div>
+      {% endif %}
+    </dl>
+  </div>
+  <div class="candidates">
+    {% if pair.document %}
+    <div class="candidate">
+      <div class="cand-layout">
+        <a class="thumb-link" href="{{ settings.document_url(pair.document.id) }}" target="_blank" rel="noopener" title="In Paperless öffnen">
+          <img class="thumb" src="/preview/{{ pair.document.id }}/thumb" alt="" loading="lazy" />
+        </a>
+        <div class="cand-body">
+          <div class="cand-head">
+            <a href="{{ settings.document_url(pair.document.id) }}" target="_blank" rel="noopener">
+              {{ pair.document.title or ('Dokument #' ~ pair.document.id) }}
+            </a>
+          </div>
+          <p class="muted">
+            {{ pair.document.correspondent_name or '—' }}
+            · {{ pair.document.created_date or '—' }}
+          </p>
+          <form method="post" action="/unlink">
+            <input type="hidden" name="expense_id" value="{{ pair.expense.id }}" />
+            <input type="hidden" name="document_id" value="{{ pair.document.id }}" />
+            <button type="submit" class="danger">Entkoppeln</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <p class="muted">Dokument nicht gefunden (ID aus Paperless-URL).</p>
+    {% endif %}
+  </div>
+</article>
+{% endfor %}
+{% endblock %}
