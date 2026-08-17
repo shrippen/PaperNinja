@@ -15,6 +15,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app import __version__
 from app.alias_backfill import backfill_vendor_aliases
 from app.auth import AuthError, AuthStore, MIN_PASSWORD_LENGTH
+from app.i18n import TRANSLATIONS, supported_lang
 from app.deps import (
     alias_store,
     audit_log,
@@ -76,6 +77,9 @@ def create_app() -> FastAPI:
     @application.middleware("http")
     async def auth_gate(request: Request, call_next):
         request.state.auth_store = store
+        lang = request.query_params.get("lang")
+        if lang:
+            request.session["lang"] = supported_lang(lang)
         path = request.url.path
         if path.startswith("/static") or path in PUBLIC_PATHS:
             return await call_next(request)
@@ -91,6 +95,8 @@ def create_app() -> FastAPI:
         https_only=settings.session_https,
         max_age=14 * 24 * 3600,
     )
+    # Expose translations to templates.
+    templates.env.globals["I18N"] = TRANSLATIONS
     register_routes(application, store)
     return application
 

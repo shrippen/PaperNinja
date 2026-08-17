@@ -2,8 +2,8 @@
 {% block title %}Belege zuerst — PaperNinja{% endblock %}
 {% block content %}
 <section class="hero-block">
-  <h1>Belege zuerst</h1>
-  <p>Unlinked Paperless-Dokumente mit Tag <code>{{ settings.pl_reverse_queue_tag or '(nicht gesetzt)' }}</code>, dazu passende Ausgaben.</p>
+  <h1>{{ T.hero_queue_title }}</h1>
+  <p>{{ T.hero_queue_desc.format(tag=(settings.pl_reverse_queue_tag or '(not set)')) }}</p>
 </section>
 
 {% if not settings.pl_reverse_queue_tag %}

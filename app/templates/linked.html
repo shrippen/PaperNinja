@@ -2,12 +2,12 @@
 {% block title %}Verknüpft — PaperNinja{% endblock %}
 {% block content %}
 <section class="hero-block">
-  <h1>Verknüpft</h1>
+  <h1>{{ T.hero_linked_title }}</h1>
   <p>
     {% if source == 'session' %}
-    Paare aus dieser Sitzung. Entkoppeln leert die Cross-Link-Felder in beiden Systemen.
+    {{ T.hero_linked_desc_session }}
     {% else %}
-    Keine Links in dieser Sitzung — Anzeige nach letzter Änderung in Invoice Ninja / Paperless.
+    {{ T.hero_linked_desc_none }}
     {% endif %}
   </p>
 </section>

@@ -2,8 +2,8 @@
 {% block title %}Zu verknüpfen — PaperNinja{% endblock %}
 {% block content %}
 <section class="hero-block">
-  <h1>Zu verknüpfen</h1>
-  <p>Vorschläge für unlinked Invoice-Ninja-Ausgaben und Paperless-Belege. Bestätigen schreibt die Custom Fields beidseitig.</p>
+  <h1>{{ T.hero_match_title }}</h1>
+  <p>{{ T.hero_match_desc }}</p>
 </section>
 
 {% if blocked %}
@@ -45,9 +45,9 @@
       hx-include="#year, #combo"
       hx-sync="#match-results:abort"
     />
-    1∶n Sammelbelege
+    {{ T.combo_toggle }}
   </label>
-  <span class="muted">Standard aus — Summensuche, langsamer</span>
+  <span class="muted">{{ T.combo_toggle_help }}</span>
 </div>
 
 <div id="match-loading" class="loading-panel htmx-indicator" aria-live="polite">

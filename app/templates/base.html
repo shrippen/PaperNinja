@@ -1,27 +1,46 @@
 <!DOCTYPE html>
 <html lang="de">
+  {% set lang = (request.query_params.get('lang') or request.session.get('lang') or 'de') %}
+  {% if lang not in I18N %}{% set lang = 'de' %}{% endif %}
+  {% set T = I18N[lang] %}
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{% block title %}PaperNinja{% endblock %}</title>
+  <link rel="icon" href="/static/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="/static/favicon-32.png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <meta property="og:title" content="PaperNinja" />
+  <meta property="og:description" content="Match Invoice Ninja expenses with Paperless-ngx documents." />
+  <meta property="og:image" content="/static/logo.png" />
   <link rel="stylesheet" href="/static/app.css" />
   <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
 </head>
 <body class="{% block bodyclass %}{% endblock %}">
   <header class="top">
-    <a class="brand" href="{% if login_view | default(false) %}/login{% else %}/match{% endif %}">PaperNinja</a>
+    <a class="brand" href="{% if login_view | default(false) %}/login{% else %}/match{% endif %}">
+      <img src="/static/logo.png" alt="" width="32" height="32" />
+      PaperNinja
+    </a>
     {% if not login_view | default(false) %}
     <nav>
-      <a href="/match" class="{% if active == 'match' %}active{% endif %}">Zu verknüpfen</a>
-      <a href="/queue" class="{% if active == 'queue' %}active{% endif %}">Belege</a>
-      <a href="/linked" class="{% if active == 'linked' %}active{% endif %}">Verknüpft</a>
-      <a href="/setup" class="{% if active == 'setup' %}active{% endif %}">Setup</a>
-      <a href="/password" class="{% if active == 'password' %}active{% endif %}">Passwort</a>
+      <a href="/match" class="{% if active == 'match' %}active{% endif %}">{{ T.nav_match }}</a>
+      <a href="/queue" class="{% if active == 'queue' %}active{% endif %}">{{ T.nav_queue }}</a>
+      <a href="/linked" class="{% if active == 'linked' %}active{% endif %}">{{ T.nav_linked }}</a>
+      <a href="/setup" class="{% if active == 'setup' %}active{% endif %}">{{ T.nav_setup }}</a>
+      <a href="/password" class="{% if active == 'password' %}active{% endif %}">{{ T.nav_password }}</a>
     </nav>
     <form class="logout" method="post" action="/logout">
       <button type="submit">Abmelden</button>
     </form>
     {% endif %}
+    <label class="lang">
+      <select id="lang-select" name="lang" aria-label="Language">
+        {% for code, label in {'de':'Deutsch','en':'English','fr':'Français','it':'Italiano','zh':'中文','ja':'日本語','es':'Español'}.items() %}
+        <option value="{{ code }}" {% if code == lang %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
     <span class="ver">v{{ version }}</span>
   </header>
   <main>
@@ -35,18 +54,29 @@
   </main>
   {% if not login_view | default(false) %}
   <aside id="kb-help" class="kb-help" hidden>
-    <h2>Tastatur</h2>
+    <h2>{{ T.kb_title }}</h2>
     <dl>
-      <div><dt>j / k</dt><dd>nächster / vorheriger Vorschlag</dd></div>
-      <div><dt>n</dt><dd>nächste Ausgabe / nächster Beleg</dd></div>
-      <div><dt>Enter</dt><dd>fokussiertes Paar verknüpfen</dd></div>
-      <div><dt>s</dt><dd>Dokument-Suche an der Ausgabe öffnen</dd></div>
-      <div><dt>/</dt><dd>Suchfeld oder Jahr fokussieren</dd></div>
-      <div><dt>?</dt><dd>diese Hilfe</dd></div>
-      <div><dt>Esc</dt><dd>Hilfe / Feld verlassen</dd></div>
+      <div><dt>j / k</dt><dd>{{ T.kb_next }}</dd></div>
+      <div><dt>n</dt><dd>{{ T.kb_next_short }}</dd></div>
+      <div><dt>Enter</dt><dd>{{ T.kb_enter }}</dd></div>
+      <div><dt>s</dt><dd>{{ T.kb_search }}</dd></div>
+      <div><dt>/</dt><dd>{{ T.kb_slash }}</dd></div>
+      <div><dt>?</dt><dd>{{ T.kb_help }}</dd></div>
+      <div><dt>Esc</dt><dd>{{ T.kb_escape }}</dd></div>
     </dl>
   </aside>
   <script src="/static/keys.js"></script>
+  <script>
+    (function () {
+      var sel = document.getElementById("lang-select");
+      if (!sel) return;
+      sel.addEventListener("change", function () {
+        var url = new URL(window.location.href);
+        url.searchParams.set("lang", sel.value);
+        window.location = url.toString();
+      });
+    })();
+  </script>
   {% endif %}
 </body>
 </html>

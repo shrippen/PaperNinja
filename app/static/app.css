@@ -43,11 +43,20 @@ body {
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   font-size: 1.2rem;
   color: var(--ink);
   text-decoration: none;
+}
+.brand img {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  flex-shrink: 0;
 }
 
 nav { display: flex; gap: 1rem; flex: 1; }
@@ -107,7 +116,11 @@ main {
   font-size: 1.75rem;
   letter-spacing: -0.03em;
 }
-.hero-block p { margin: 0 0 1.25rem; color: var(--muted); max-width: 55ch; }
+.hero-block p {
+  margin: 0 0 1.25rem;
+  color: var(--muted);
+  max-width: none;
+}
 
 .flash {
   padding: 0.75rem 1rem;
@@ -262,21 +275,56 @@ a { color: var(--accent); }
 .year-bar {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.75rem 1rem;
   flex-wrap: wrap;
   margin-bottom: 1rem;
   padding: 0.75rem 1rem;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 10px;
+  font-size: 0.95rem;
+  line-height: 1.25;
 }
+
+/* Global `.muted` setzt margin-top — in der Toolbar alles auf einer Zeile. */
+.year-bar > label,
+.year-bar > select,
+.year-bar > .muted,
+.year-bar > .toggle {
+  margin: 0;
+  line-height: 1.25;
+}
+
+.year-bar > label:not(.toggle) {
+  font-weight: 600;
+}
+
+.year-bar select {
+  font: inherit;
+  line-height: 1.25;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.year-bar > .muted {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
 .year-bar .toggle {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   font-weight: 600;
+  cursor: pointer;
 }
-.year-bar .toggle input { margin: 0; }
+
+.year-bar .toggle input {
+  margin: 0;
+  flex-shrink: 0;
+}
 
 .combo-badge {
   display: inline-block;

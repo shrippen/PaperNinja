@@ -1,28 +1,28 @@
 {% extends "base.html" %}
-{% block title %}{% if setup %}Passwort festlegen{% else %}Anmelden{% endif %} — PaperNinja{% endblock %}
+{% block title %}{% if setup %}{{ T.login_setup_title }}{% else %}{{ T.login_title }}{% endif %} — PaperNinja{% endblock %}
 {% block bodyclass %}login-page{% endblock %}
 {% block content %}
 <section class="login-card">
   {% if setup %}
-  <h1>Passwort festlegen</h1>
-  <p>Beim ersten Start. Das Passwort wird als Argon2-Hash in <code>data/auth.json</code> abgelegt — nicht im Klartext.</p>
+  <h1>{{ T.login_setup_title }}</h1>
+  <p>{{ T.login_setup_desc | safe }}</p>
   <form method="post" action="/login" class="login-form">
     <input type="hidden" name="action" value="setup" />
-    <label for="password">Passwort</label>
+    <label for="password"> {{ T.password_new }}</label>
     <input id="password" name="password" type="password" autocomplete="new-password" required minlength="8" autofocus />
-    <label for="password_confirm">Wiederholen</label>
+    <label for="password_confirm">{{ T.password_confirm }}</label>
     <input id="password_confirm" name="password_confirm" type="password" autocomplete="new-password" required minlength="8" />
-    <button type="submit">Speichern und anmelden</button>
+    <button type="submit">{{ T.login_btn_setup }}</button>
   </form>
   {% else %}
-  <h1>Anmelden</h1>
-  <p>Nur Passwort — ein Operator.</p>
+  <h1>{{ T.login_title }}</h1>
+  <p>{{ T.login_desc }}</p>
   <form method="post" action="/login" class="login-form">
     <input type="hidden" name="action" value="login" />
     <input type="hidden" name="next" value="{{ next_url }}" />
-    <label for="password">Passwort</label>
+    <label for="password">{{ T.password_current }}</label>
     <input id="password" name="password" type="password" autocomplete="current-password" required autofocus />
-    <button type="submit">Weiter</button>
+    <button type="submit">{{ T.login_btn }}</button>
   </form>
   {% endif %}
 </section>

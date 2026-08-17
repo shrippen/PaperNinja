@@ -46,7 +46,7 @@
       hx-vals='{"expense_id": "{{ item.expense.id }}", "year": "{{ year }}", "preset": "around_date"}'
       hx-target="#search-slot-{{ item.expense.id }}"
       hx-swap="innerHTML"
-    >Dokument suchen</button>
+    >{{ T.search_btn }}</button>
     <div id="search-slot-{{ item.expense.id }}"></div>
     {% for combo_item in item.combos %}
     <div class="candidate kb-item combo">

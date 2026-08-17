@@ -2,18 +2,14 @@
 {% block title %}Setup / Felder — PaperNinja{% endblock %}
 {% block content %}
 <section class="hero-block">
-  <h1>Setup / Felder</h1>
-  <p>
-    PaperNinja speichert kein Mapping. Trage die Werte in deine <code>.env</code> ein
-    und starte den Container neu. Diese Seite zeigt live die Felder beider Dienste
-    und welche ENV-Variable du setzen musst.
-  </p>
+  <h1>{{ T.hero_setup_title }}</h1>
+  <p>{{ T.hero_setup_desc | safe }}</p>
 </section>
 
 {% if mapping_complete %}
-<div class="flash ok">Pflicht-Mapping ist gesetzt — Matching ist nutzbar.</div>
+<div class="flash ok">{{ T.setup_flash_ok }}</div>
 {% else %}
-<div class="flash warn">Pflicht-Mapping unvollständig. Siehe aktuelle ENV unten.</div>
+<div class="flash warn">{{ T.setup_flash_warn }}</div>
 {% endif %}
 
 <section class="grid-2">
