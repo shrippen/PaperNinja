@@ -1,6 +1,6 @@
 # PaperNinja — zentrale Designentscheidungen
 
-Stand: 2026-08-17. Dieses Dokument hält fest, warum die App so gebaut ist,
+Stand: 2026-08-19. Dieses Dokument hält fest, warum die App so gebaut ist,
 nicht nur wie. Abweichungen sollten hier begründet werden.
 
 Pflege: Bei jeder neuen oder geänderten Designentscheidung in derselben Änderung
@@ -20,15 +20,17 @@ bestehenden Custom Fields beider Systeme.
 
 ## Architektur
 
-- **Ein Prozess:** FastAPI + serverseitiges Jinja, leichtes HTMX. Kein SPA-Build.
+- **Ein Prozess:** FastAPI + serverseitiges Jinja, HTMX **2.0.4** lokal unter
+  `/static/htmx.min.js` (kein CDN; CSP verbietet fremde Scripts). Kein SPA-Build.
 - **Keine Fach-Datenbank:** Matching-State kommt live aus beiden APIs. Unlinked
   heißt: Paperless-URL an der Ausgabe leer bzw. Ausgabennummer am Dokument leer.
 - **Konfiguration über ENV:** Feld-Mapping (`custom_value1`–`4` bzw. Paperless
   Field-IDs) steht in `.env`, nicht in der App. Der Screen „Setup / Felder“
   zeigt nur Discovery + Copy-Hilfe; Speichern heißt Container/Prozess neu starten.
 - **Minimale Persistenz in `DATA_DIR`:** App-Login (`auth.json`), gelernte
-  Vendor-Aliase (`vendor_aliases.json`), Audit-Log (`audit.log`). Das ist kein
-  Matching-State, nur Zugangsschutz, Lernen und Nachvollziehbarkeit.
+  Vendor-Aliase (`vendor_aliases.json`), Ignorieren-Liste (`ignore.json`),
+  Audit-Log (`audit.log`). Das ist kein Matching-State, nur Zugangsschutz,
+  Lernen, Ausblenden und Nachvollziehbarkeit.
 - **Deploy:** Alpine-basiertes Docker-Image auf GHCR
   (`ghcr.io/shrippen/paperninja`), gebaut per GitHub Action (linux/amd64 +
   arm64). Compose mit `env_file` und Volume für `data/`.
@@ -47,7 +49,18 @@ API-Tokens bleiben serverseitig. Das Frontend sieht nur Proxy-Vorschauen
 - Nur **ein Passwort**, kein Benutzername (Single-Operator-Tool).
 - Beim **ersten Start** ohne `auth.json`-Hash: Screen „Passwort festlegen“.
 - Danach Login-Screen. Session-Cookie (HTTP-only, Signed via Starlette).
-- **Passwort ändern** unter `/password`; Hash wird in `auth.json` ersetzt.
+- **Rate-Limit:** Pro Fehlversuch ~0,4 s Delay (Argon2 plus Pause). Nach 5
+  falschen Passwörtern (pro Client-IP, im Prozess) 60 s Lock.
+  `X-Forwarded-For` nur wenn `SESSION_HTTPS=true` (Reverse-Proxy), sonst
+  spoofbar.
+- **Passwort ändern** unter `/password`; Hash wird in `auth.json` ersetzt und
+  `auth_epoch` erhöht — andere Sessions sind danach ungültig. Die aktuelle
+  Session wird neu aufgebaut (gegen Session-Fixation).
+- Verify ohne gesetztes Passwort läuft gegen einen Dummy-Argon2-Hash, damit
+  die Timing-Seite nicht verrät, ob schon ein Passwort existiert.
+- Security-Header auf allen Antworten: `X-Frame-Options: DENY`,
+  `X-Content-Type-Options: nosniff`, CSP `script-src 'self'` (HTMX lokal,
+  kein CDN). Inline-Scripts in den Templates brauchen `'unsafe-inline'`.
 - Das Passwort wird **nicht verschlüsselt wiederherstellbar** gespeichert,
   sondern als **Argon2id-Hash**.
 - `/health` bleibt ohne Login (Docker-Healthcheck).
@@ -69,7 +82,10 @@ Signale (additiv, Cap 100):
 | Rechnungsnr.   | 30  | IN-Custom-Field/Expense-Nummer vs. PL-Feld/Titel/OCR |
 
 Nur Kandidaten ≥ `MATCH_MIN_SCORE`. Top-N pro Ausgabe. Vorfilter: Dokumente
-außerhalb ~2× Datumsfenster fliegen raus.
+außerhalb ~2× Datumsfenster fliegen raus. **Ignorierte** Ausgaben und Belege
+(`DATA_DIR/ignore.json`) werden vor dem Scorer entfernt — kein Auto-Link,
+nur Ausblenden. Wieder einblenden unter `/ignored`. Ein späterer Link hebt
+Ignore für das Paar auf.
 
 **Vendor-Aliase:** Bei jedem bestätigten Link werden Vendor (IN) und Correspondent
 (PL) normalisiert und in `vendor_aliases.json` zu Äquivalenz-Clustern zusammengeführt.
@@ -89,6 +105,9 @@ Warum nicht Standard: Kombinatorik plus mehr UI; der Fall ist selten; die API-La
 dominiert weiter, die Extra-CPU fällt vor allem bei vielen offenen Belegen auf.
 
 **Jahresfilter:** Default aktuelles Kalenderjahr auf `/match` und `/queue`.
+Paperless filtert mit `created__date__gte/lte`. Invoice Ninja sendet
+`date=YYYY-MM-DD,YYYY-MM-DD`, wenn die API das respektiert; sonst Fallback auf
+volle Liste. Client-seitig wird das Jahr immer noch gefiltert.
 
 **Linken:** Schreibt IN (Paperless-URL + ggf. Rechnungsnummer) und Paperless
 (Ausgabennummer, IN-URL, Rechnungsnummer). Scheitert Paperless, Rollback der
@@ -105,9 +124,13 @@ IN-URL am Dokument (`/unlink`).
 | `/match` | Ausgaben zuerst — Auto-Kandidaten |
 | `/queue` | Belege zuerst — nur Docs mit `PL_REVERSE_QUEUE_TAG`, unlinked |
 | `/linked` | Verknüpfte Paare dieser Session; sonst Fallback über `updated_at` / PL-URL |
+| `/ignored` | Ausgeblendete Ausgaben/Belege; Wieder-einblenden |
 | `/search` | Manuelle Paperless-Suche pro Ausgabe (HTMX-Panel) |
 | `/password` | Passwort ändern |
 | `/setup` | Feld-Discovery + ENV-Hilfe |
+
+UI-Sprache: **Deutsch und Englisch** (Default `de`). Weitere Sprachen erst, wenn
+DE/EN durchgängig sind.
 
 **Manuelle Suche:** Presets (Datum ±14d, Betrag, Vendor, Rechnungsnr., Jahr,
 nur unlinked), Volltext, Datumsbereich, Korrespondent-Filter. Ergebnisse mit
@@ -116,10 +139,15 @@ Vorschau und direktem Verknüpfen.
 **Tastatur:** `j`/`k` zwischen Vorschlägen, `n` nächste Ausgabe/Beleg,
 `Enter` verknüpfen, `s` Suche öffnen, `/` Fokus Suche/Jahr, `?` Hilfe.
 
-**Marke:** App-Icon ist Variante D (Maske mit zwei Dokumenten) in Teal auf
-cremefarbenem abgerundetem Quadrat; nur die Ecken außerhalb der Rundung sind
-transparent. Favicon/`apple-touch-icon` unter `/static/`; README und GitHub-Social
-nutzen `docs/logo.png` bzw. `docs/social.png`.
+**Visuelles Design:** Farben, Typografie, Icon-Stil und Landing-Page-Layout
+folgen dem gemeinsamen Design-System
+[shrippen/DesignDefault](https://github.com/shrippen/DesignDefault)
+(Gruvbox-Dark-Palette, Rajdhani-Headings, kein Light-Mode auf Landing Pages).
+App-Icon ist Variante D (Maske mit zwei Dokumenten) mit Cream-Fill (`#E8DCC4`)
+auf abgerundetem Quadrat. Favicon/`apple-touch-icon` unter `/static/`;
+README und GitHub-Social nutzen `docs/logo.png` bzw. `docs/social.png`.
+Badges im Format `shields.io` mit `labelColor=1c1c20`, Versionswert `e8dcc4`,
+Tech-Tag `83a598`, Lizenz `a89984`.
 
 Vorschau: Miniatur über den authentifizierten Proxy (`/preview/.../thumb`);
 ein Klick auf Thumbnail oder Titel öffnet die **Paperless-Detailseite**, nicht die
@@ -128,7 +156,7 @@ PDF-Proxy-URL.
 ## Audit-Log
 
 Append-only `DATA_DIR/audit.log`: Zeitstempel, Aktion (`link`, `unlink`,
-`password_change`), relevante IDs. Bei Überschreiten von `AUDIT_LOG_MAX_BYTES`
+`ignore`, `unignore`, `password_change`), relevante IDs. Bei Überschreiten von `AUDIT_LOG_MAX_BYTES`
 werden älteste Zeilen abgeschnitten (~60 % behalten). Kein Multi-User — es gibt
 keinen Benutzernamen, nur die Aktion selbst.
 
@@ -156,22 +184,27 @@ stabile Zahl in Paperless, und 1∶n braucht **einen** Betrag pro Beleg.
 
 ## Performance / Caching (bewusst nicht: Matching-DB)
 
-Ladezeit kommt fast nur von den Live-APIs (alle Expenses, Jahres-Dokumente), nicht
-vom Scorer. Aktuell: paralleles Laden IN+PL (`asyncio.gather`); Thumbs mit
-`Cache-Control` 5 min; Alias-Backfill nur einmal.
+Ladezeit kommt fast nur von den Live-APIs, nicht vom Scorer.
 
-Weitere Optionen, falls es eng wird:
+- **TTL-Cache im Prozess** (Default 180 s, `API_CACHE_TTL_SECONDS`; `0` = aus)
+  für Expense-Listen (`in:expenses:all` / `in:expenses:{year}`) und
+  Paperless-Jahreslisten (`pl:documents:{year}`, Queue-Tags). Nach erfolgreichem
+  Link/Unlink werden die Keys invalidiert, damit frisch verknüpfte Items nicht
+  als unlinked bleiben. Kein Matching-State auf Disk, nur RAM im Prozess.
+- **Invoice-Ninja-Datumsfilter** per `date=YYYY-MM-DD,YYYY-MM-DD`. Probe einmal
+  pro Prozess: HTTP 400/422 oder datierte Expenses außerhalb des Fensters →
+  Filter aus, volle Liste. Undatierte Expenses zählen nicht als Leak.
+  Client-seitiger Jahresfilter bleibt immer. Alias-Backfill braucht beim ersten
+  Lauf die unfiltered Expense-Liste (`in:expenses:all`).
+- Parallel IN+PL (`asyncio.gather`); Thumbs mit `Cache-Control` 5 min;
+  `truncate_content`; Alias-Backfill nur einmal.
 
-1. **Kurzzeit-Cache** der API-Listen (60–120 s im Prozess) — größter Hebel, Risiko:
-   frisch gelinkte Items tauchen kurz noch als unlinked auf (nach Link die Keys
-   invalidieren).
-2. **IN serverseitig nach Datum filtern**, statt alle Expenses zu ziehen — wenn die
-   API das hergibt.
-3. **Weniger OCR:** `truncate_content` bleibt an; `PL_FIELD_AMOUNT` vermeidet
-   Textsuche.
-4. **HTTP-ETags** gegen Paperless/IN — nur wenn die APIs sie sinnvoll senden.
-5. **Snapshot/SQLite** — würde die „keine Fach-DB“-Regel aufgeben; nur wenn Live-
-   Reads nachweislich zu langsam sind.
+Weitere Optionen, falls es trotz Cache eng wird:
+
+1. **Weniger OCR:** `PL_FIELD_AMOUNT` vermeidet Textsuche.
+2. **HTTP-ETags** gegen Paperless/IN — nur wenn die APIs sie sinnvoll senden.
+3. **Snapshot/SQLite** — würde die „keine Fach-DB“-Regel aufgeben; nur wenn
+   Live-Reads nachweislich zu langsam sind.
 
 ## Bewusste Nicht-Ziele (aktuell)
 
@@ -179,11 +212,9 @@ Weitere Optionen, falls es eng wird:
 - Plugin/Fork von Paperless oder Invoice Ninja.
 - Multi-User, Rollen, SSO.
 - Vollautomatisches Verknüpfen ohne Bestätigung.
-- Ignorieren-Liste, Schwellen-Autolink, Erinnerungs-Mails (Backlog).
+- Schwellen-Autolink, Erinnerungs-Mails (Backlog).
 
 ## Backlog (priorisiert)
 
-1. **Ignorieren** — Ausgabe/Beleg ausblenden (Tag/Feld/Session).
-2. **Schwellen-Autolink (opt-in)** — nur Score 95+ und eindeutiger Erstplatz.
-3. **Unmatched-Erinnerung** — Zähler / n8n wenn Expenses > N Tage ohne URL.
-4. **API-Listen-Cache** mit Invalidierung nach Link/Unlink.
+1. **Schwellen-Autolink (opt-in)** — nur Score 95+ und eindeutiger Erstplatz.
+2. **Unmatched-Erinnerung** — Zähler / n8n wenn Expenses > N Tage ohne URL.
