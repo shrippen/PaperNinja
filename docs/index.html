@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PaperNinja — Match Invoice Ninja expenses with Paperless-ngx documents</title>
+<meta name="description" content="Self-hosted companion app that suggests matches between Invoice Ninja expenses and Paperless-ngx documents. Human-in-the-loop, no matching database." />
+<meta property="og:title" content="PaperNinja" />
+<meta property="og:description" content="Match Invoice Ninja expenses with Paperless-ngx documents." />
+<meta property="og:image" content="social.png" />
+<meta property="og:type" content="website" />
+<link rel="icon" href="logo.png" />
+<style>
+/* -- tokens ---------------------------------------------------------- */
+:root {
+  --bg: #f3efe6;
+  --ink: #1c1914;
+  --muted: #6b6560;
+  --card: #fffdf8;
+  --line: #d9d0c0;
+  --accent: #0f6b5c;
+  --accent-soft: #e0f5ef;
+  --accent-ink: #f4fffb;
+  --font: "IBM Plex Sans", "Inter", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  --radius: 16px;
+  --max: 1060px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #171412;
+    --ink: #ece6dc;
+    --muted: #9a938a;
+    --card: #221e1a;
+    --line: #3a342c;
+    --accent: #2dd4a8;
+    --accent-soft: #1a2e28;
+    --accent-ink: #0e1f1a;
+  }
+}
+
+/* -- reset & base ---------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--bg);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+img { display: block; max-width: 100%; }
+
+/* -- layout helpers -------------------------------------------------- */
+.container { max-width: var(--max); margin: 0 auto; padding: 0 1.5rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+
+/* -- nav ------------------------------------------------------------- */
+.nav {
+  position: sticky; top: 0; z-index: 20;
+  background: color-mix(in srgb, var(--card) 90%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+.nav .container {
+  display: flex; align-items: center; gap: 1rem;
+  height: 3.5rem;
+}
+.nav-brand {
+  display: flex; align-items: center; gap: .5rem;
+  font-weight: 700; font-size: 1.15rem;
+  color: var(--ink); text-decoration: none;
+}
+.nav-brand img { width: 32px; height: 32px; }
+.nav-links { display: flex; gap: 1.25rem; margin-left: auto; font-size: .9rem; }
+.nav-links a { color: var(--muted); }
+.nav-links a:hover { color: var(--accent); text-decoration: none; }
+
+/* -- hero ------------------------------------------------------------ */
+.hero {
+  padding: 5rem 0 4rem;
+  text-align: center;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 0%, color-mix(in srgb, var(--accent) 8%, transparent) 0%, transparent 100%),
+    var(--bg);
+}
+.hero-logo {
+  width: 96px; height: 96px;
+  margin: 0 auto 1.5rem;
+  border-radius: 20px;
+  filter: drop-shadow(0 4px 24px color-mix(in srgb, var(--accent) 25%, transparent));
+}
+.hero h1 {
+  font-size: clamp(2rem, 5vw, 3rem);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin-bottom: .75rem;
+}
+.hero h1 em {
+  font-style: normal;
+  color: var(--accent);
+}
+.hero-sub {
+  font-size: 1.15rem;
+  color: var(--muted);
+  max-width: 38em;
+  margin: 0 auto 2rem;
+}
+.hero-actions {
+  display: flex; gap: .75rem;
+  justify-content: center; flex-wrap: wrap;
+}
+.btn {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .65rem 1.4rem;
+  border-radius: 10px;
+  font-weight: 600; font-size: .95rem;
+  border: 0; cursor: pointer;
+  transition: filter .15s;
+}
+.btn:hover { filter: brightness(1.08); text-decoration: none; }
+.btn-primary { background: var(--accent); color: var(--accent-ink); }
+.btn-secondary {
+  background: var(--card); color: var(--ink);
+  border: 1px solid var(--line);
+}
+.hero-badges {
+  display: flex; gap: .75rem;
+  justify-content: center; flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+.hero-badges img { height: 22px; }
+
+/* -- sections -------------------------------------------------------- */
+section { padding: 4rem 0; }
+section:nth-child(even) { background: var(--card); }
+.section-title {
+  font-size: 1.6rem;
+  text-align: center;
+  margin-bottom: .5rem;
+  letter-spacing: -0.02em;
+}
+.section-sub {
+  text-align: center;
+  color: var(--muted);
+  margin-bottom: 2.5rem;
+  max-width: 40em;
+  margin-left: auto; margin-right: auto;
+}
+
+/* -- feature cards --------------------------------------------------- */
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+.feature {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  transition: border-color .2s, box-shadow .2s;
+}
+section:nth-child(even) .feature { background: var(--card); border-color: var(--line); }
+.feature:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 16px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.feature-icon {
+  width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 10px;
+  margin-bottom: .75rem;
+  font-size: 1.3rem;
+}
+.feature h3 { font-size: 1.05rem; margin-bottom: .35rem; }
+.feature p { font-size: .9rem; color: var(--muted); line-height: 1.5; }
+
+/* -- how-it-works ---------------------------------------------------- */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  counter-reset: step;
+}
+.step {
+  position: relative;
+  padding: 1.5rem;
+  padding-top: 2.5rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.step::before {
+  counter-increment: step;
+  content: counter(step);
+  position: absolute;
+  top: -1rem; left: 1.25rem;
+  width: 2rem; height: 2rem;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: .9rem;
+}
+.step h3 { font-size: 1rem; margin-bottom: .3rem; }
+.step p { font-size: .88rem; color: var(--muted); }
+.step code {
+  font-family: var(--mono);
+  font-size: .82rem;
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg));
+  padding: .15em .4em;
+  border-radius: 4px;
+}
+
+/* -- architecture diagram -------------------------------------------- */
+.arch {
+  display: flex; align-items: center; justify-content: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+.arch-box {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem 1.5rem;
+  text-align: center;
+  min-width: 180px;
+}
+.arch-box strong { display: block; margin-bottom: .25rem; }
+.arch-box span { font-size: .85rem; color: var(--muted); }
+.arch-arrow {
+  font-size: 1.5rem;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+@media (max-width: 640px) {
+  .arch { flex-direction: column; }
+  .arch-arrow { transform: rotate(90deg); }
+}
+
+/* -- quickstart code ------------------------------------------------- */
+.code-block {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: .85rem;
+  line-height: 1.7;
+  max-width: 600px;
+  margin: 0 auto;
+  color: var(--ink);
+}
+.code-block .cm { color: var(--muted); }
+
+/* -- footer ---------------------------------------------------------- */
+.footer {
+  padding: 2rem 0;
+  border-top: 1px solid var(--line);
+  text-align: center;
+  font-size: .85rem;
+  color: var(--muted);
+}
+.footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- nav -->
+<header class="nav">
+  <div class="container">
+    <a class="nav-brand" href="#">
+      <img src="logo.png" alt="" width="32" height="32" />
+      PaperNinja
+    </a>
+    <nav class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how-it-works">Setup</a>
+      <a href="#architecture">Architecture</a>
+      <a href="https://github.com/shrippen/PaperNinja">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<!-- hero -->
+<section class="hero">
+  <div class="container">
+    <img class="hero-logo" src="logo.png" alt="PaperNinja logo" />
+    <h1>Match expenses to receipts.<br/><em>You confirm.</em></h1>
+    <p class="hero-sub">
+      Self-hosted companion app that suggests matches between
+      <strong>Invoice Ninja</strong> expenses and <strong>Paperless-ngx</strong>
+      documents, then writes cross-links into your existing custom fields.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#how-it-works">Get started</a>
+      <a class="btn btn-secondary" href="https://github.com/shrippen/PaperNinja">
+        &#9733; GitHub
+      </a>
+    </div>
+    <div class="hero-badges">
+      <img src="https://img.shields.io/github/license/shrippen/PaperNinja?style=flat-square" alt="MIT License" />
+      <img src="https://img.shields.io/badge/docker-ghcr.io-blue?style=flat-square" alt="Docker" />
+      <img src="https://img.shields.io/badge/stack-FastAPI%20%2B%20HTMX-teal?style=flat-square" alt="FastAPI + HTMX" />
+    </div>
+  </div>
+</section>
+
+<!-- features -->
+<section id="features">
+  <div class="container">
+    <h2 class="section-title">Why PaperNinja?</h2>
+    <p class="section-sub">
+      Both systems already store your data. PaperNinja just connects them &mdash;
+      live, transparent, and under your control.
+    </p>
+    <div class="features">
+      <div class="feature">
+        <div class="feature-icon">&#128269;</div>
+        <h3>Smart scoring</h3>
+        <p>Amount, date, vendor fuzzy match and invoice number &mdash; each signal scored and explained in the UI.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">&#9745;</div>
+        <h3>Human-in-the-loop</h3>
+        <p>Every link requires your confirmation. No auto-link, no silent overwrites. Ignore false positives with one click.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">&#128260;</div>
+        <h3>No matching database</h3>
+        <p>All state lives in Invoice Ninja &amp; Paperless. PaperNinja reads and writes via their APIs &mdash; nothing to migrate.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">&#128209;</div>
+        <h3>1&#8758;n combined receipts</h3>
+        <p>One bank charge covering multiple receipts? Optional sum-search finds document sets that add up to the expense.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">&#127968;</div>
+        <h3>Self-hosted &amp; private</h3>
+        <p>Single Docker container (Alpine, ~50 MB). API tokens stay on your server, behind your auth.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">&#127760;</div>
+        <h3>German &amp; English</h3>
+        <p>Full UI translation including score details. Keyboard shortcuts for power users.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- how it works -->
+<section id="how-it-works">
+  <div class="container">
+    <h2 class="section-title">Up and running in 3 minutes</h2>
+    <p class="section-sub">Docker Compose, two API tokens, done.</p>
+    <div class="steps">
+      <div class="step">
+        <h3>Pull &amp; configure</h3>
+        <p>Grab <code>docker-compose.yml</code> and <code>.env.example</code>, set your Invoice&nbsp;Ninja and Paperless URLs &amp; tokens.</p>
+      </div>
+      <div class="step">
+        <h3>Start the container</h3>
+        <p>Run <code>docker compose up -d</code>. Open <code>localhost:8080</code> and set your app password.</p>
+      </div>
+      <div class="step">
+        <h3>Map custom fields</h3>
+        <p>The <strong>Setup / Fields</strong> screen auto-discovers both APIs. Copy the suggested ENV lines and restart.</p>
+      </div>
+      <div class="step">
+        <h3>Start linking</h3>
+        <p>Review suggestions on <strong>To link</strong>, confirm matches, and see cross-links appear in both systems instantly.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:2.5rem;">
+      <div class="code-block">
+<span class="cm"># Quick start</span>
+mkdir paperninja && cd paperninja
+curl -fsSL -o docker-compose.yml \
+  https://raw.githubusercontent.com/shrippen/PaperNinja/main/docker-compose.yml
+cp .env.example .env  <span class="cm"># set tokens</span>
+docker compose up -d
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- architecture -->
+<section id="architecture">
+  <div class="container">
+    <h2 class="section-title">Architecture</h2>
+    <p class="section-sub">
+      One process, no SPA build, no matching database. Reads and writes go straight to the source APIs.
+    </p>
+    <div class="arch">
+      <div class="arch-box">
+        <strong>Browser</strong>
+        <span>HTMX + Jinja templates</span>
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-box" style="border-color: var(--accent);">
+        <strong>PaperNinja</strong>
+        <span>FastAPI &middot; Python 3.12</span>
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-box">
+        <strong>Invoice Ninja</strong>
+        <span>Expenses &middot; custom fields</span>
+      </div>
+    </div>
+    <div class="arch" style="margin-top:.75rem;">
+      <div class="arch-box" style="visibility:hidden; min-width:180px;"><strong>&nbsp;</strong><span>&nbsp;</span></div>
+      <div class="arch-arrow" style="visibility:hidden;">&rarr;</div>
+      <div class="arch-box" style="border-color: var(--accent); visibility:hidden;">
+        <strong>&nbsp;</strong><span>&nbsp;</span>
+      </div>
+      <div class="arch-arrow">&searr;</div>
+      <div class="arch-box">
+        <strong>Paperless-ngx</strong>
+        <span>Documents &middot; custom fields</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- footer -->
+<footer class="footer">
+  <div class="container">
+    <p>
+      <a href="https://github.com/shrippen/PaperNinja">PaperNinja</a> &middot;
+      MIT License &middot;
+      <a href="https://github.com/shrippen/PaperNinja/issues">Issues</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
