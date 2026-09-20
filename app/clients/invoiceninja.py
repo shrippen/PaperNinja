@@ -39,6 +39,9 @@ class Expense:
 
 
 class InvoiceNinjaClient:
+    # None = untested, True = date=from,to works, False = ignored or rejected
+    _date_filter_ok: bool | None = None
+
     def __init__(self, base_url: str, token: str, timeout: float = 60.0) -> None:
         if not base_url or not token:
             raise InvoiceNinjaError("Invoice Ninja URL and token are required")
@@ -158,18 +161,59 @@ class InvoiceNinjaClient:
                 return data
         raise InvoiceNinjaError("Could not load company settings for custom fields")
 
-    async def list_expenses(self, *, per_page: int = 100) -> list[Expense]:
+    @classmethod
+    def reset_date_filter_probe(cls) -> None:
+        cls._date_filter_ok = None
+
+    async def list_expenses(
+        self,
+        *,
+        per_page: int = 100,
+        date_from: date | None = None,
+        date_to: date | None = None,
+    ) -> list[Expense]:
+        use_date = (
+            date_from is not None
+            and date_to is not None
+            and InvoiceNinjaClient._date_filter_ok is not False
+        )
+        try:
+            expenses = await self._paginate_expenses(
+                per_page=per_page,
+                date_from=date_from if use_date else None,
+                date_to=date_to if use_date else None,
+            )
+        except InvoiceNinjaError as exc:
+            if use_date and _date_filter_rejected(exc):
+                InvoiceNinjaClient._date_filter_ok = False
+                expenses = await self._paginate_expenses(per_page=per_page)
+            else:
+                raise
+        else:
+            if use_date and date_from and date_to:
+                if expenses_leak_date_range(expenses, date_from, date_to):
+                    InvoiceNinjaClient._date_filter_ok = False
+                else:
+                    InvoiceNinjaClient._date_filter_ok = True
+        return expenses
+
+    async def _paginate_expenses(
+        self,
+        *,
+        per_page: int = 100,
+        date_from: date | None = None,
+        date_to: date | None = None,
+    ) -> list[Expense]:
         expenses: list[Expense] = []
         page = 1
         while True:
-            response = await self._client.get(
-                "/api/v1/expenses",
-                params={
-                    "per_page": per_page,
-                    "page": page,
-                    "include": "vendor",
-                },
+            params = expense_list_params(
+                page=page,
+                per_page=per_page,
+                date_from=date_from,
+                date_to=date_to,
             )
+            response = await self._client.get("/api/v1/expenses", params=params)
             self._raise_for_status(response)
             payload = response.json()
             rows = payload.get("data") or []
@@ -247,6 +291,42 @@ class InvoiceNinjaClient:
         raise InvoiceNinjaError(
             f"Invoice Ninja HTTP {response.status_code}:{extra} {detail}".strip()
         )
+
+
+def expense_list_params(
+    *,
+    page: int,
+    per_page: int,
+    date_from: date | None = None,
+    date_to: date | None = None,
+) -> dict[str, str | int]:
+    params: dict[str, str | int] = {
+        "per_page": per_page,
+        "page": page,
+        "include": "vendor",
+    }
+    if date_from is not None and date_to is not None:
+        params["date"] = f"{date_from.isoformat()},{date_to.isoformat()}"
+    return params
+
+
+def expenses_leak_date_range(
+    expenses: list[Expense],
+    date_from: date,
+    date_to: date,
+) -> bool:
+    """True if any dated expense lies outside the requested window."""
+    for expense in expenses:
+        if expense.date is None:
+            continue
+        if expense.date < date_from or expense.date > date_to:
+            return True
+    return False
+
+
+def _date_filter_rejected(exc: InvoiceNinjaError) -> bool:
+    text = str(exc)
+    return "HTTP 400" in text or "HTTP 422" in text
 
 
 def _parse_datetime(value: Any) -> datetime | None:

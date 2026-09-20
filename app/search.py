@@ -8,14 +8,14 @@ from app.clients.paperless import Document, PaperlessClient
 from app.settings import Settings
 
 
-PRESETS: list[tuple[str, str]] = [
-    ("around_date", "Datum ±14d"),
-    ("amount", "Betrag ±5%"),
-    ("vendor", "Vendor/Korrespondent"),
-    ("invoice", "Rechnungsnr."),
-    ("year", "Jahr"),
-    ("unlinked", "Nur unlinked"),
-]
+PRESET_KEYS: tuple[str, ...] = (
+    "around_date",
+    "amount",
+    "vendor",
+    "invoice",
+    "year",
+    "unlinked",
+)
 
 
 async def search_documents_for_expense(

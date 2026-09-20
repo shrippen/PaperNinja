@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Zu verknüpfen — PaperNinja{% endblock %}
+{% block title %}{{ T.title_match }} — PaperNinja{% endblock %}
 {% block content %}
 <section class="hero-block">
   <h1>{{ T.hero_match_title }}</h1>
@@ -8,12 +8,12 @@
 
 {% if blocked %}
 <div class="flash warn">
-  Mapping oder API-Zugang unvollständig.
-  <a href="/setup">Setup / Felder öffnen</a> und ENV setzen.
+  {{ T.blocked_mapping }}
+  <a href="/setup">{{ T.open_setup }}</a>
 </div>
 {% else %}
 <div class="year-bar">
-  <label for="year">Jahr</label>
+  <label for="year">{{ T.year_label }}</label>
   <select
     name="year"
     id="year"
@@ -29,7 +29,7 @@
     <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
     {% endfor %}
   </select>
-  <span class="muted">Nur Ausgaben mit Datum in diesem Jahr</span>
+  <span class="muted">{{ T.year_hint }}</span>
   <label class="toggle" for="combo">
     <input
       type="checkbox"
@@ -51,7 +51,12 @@
 </div>
 
 <div id="match-loading" class="loading-panel htmx-indicator" aria-live="polite">
-  <div class="loading-label" data-loading-label>Lade Ausgaben und Belege …</div>
+  <div
+    class="loading-label"
+    data-loading-label
+    data-tpl="{{ T.match_loading_year }}"
+    data-tpl-combo="{{ T.match_loading_year_combo }}"
+  >{{ T.match_loading }}</div>
   <div class="progress-track" aria-hidden="true">
     <div class="progress-bar"></div>
   </div>
@@ -74,10 +79,10 @@
   function setLoadingLabel(year) {
     const label = document.querySelector("[data-loading-label]");
     if (!label) return;
-    const extra = comboOn() ? " inkl. 1∶n …" : " …";
-    label.textContent = year
-      ? "Lade Ausgaben und Belege für " + year + extra
-      : "Lade Ausgaben und Belege" + extra;
+    const tpl = comboOn() ? label.dataset.tplCombo : label.dataset.tpl;
+    if (tpl && year) {
+      label.textContent = tpl.replace("{year}", year);
+    }
   }
 
   document.body.addEventListener("htmx:configRequest", function (event) {

@@ -8,6 +8,7 @@ from app.matching.scorer import (
     build_matches,
     combo_amount,
     filter_expenses_by_year,
+    filter_unlinked_documents,
     filter_unlinked_expenses,
     parse_amount,
     score_pair,
@@ -76,6 +77,28 @@ def test_score_pair_strong_match():
     assert len(candidate.factors) == 4
     assert all(f.detail for f in candidate.factors)
     assert sum(f.points for f in candidate.factors) >= 70
+    assert any("Ausgabe" in f.detail for f in candidate.factors)
+
+
+def test_score_pair_english_details():
+    settings = Settings(
+        in_expense_field_invoice_number="custom_value1",
+        in_expense_field_paperless_url="custom_value2",
+        pl_field_invoice_number=1,
+        pl_field_expense_number=2,
+        pl_field_invoice_ninja_url=3,
+        match_min_score=40,
+        match_date_window_days=7,
+        match_amount_tolerance=0.02,
+    )
+    expense = _expense(custom_value1="RE-99")
+    document = _doc(custom_fields={1: "RE-99"})
+    candidate = score_pair(expense, document, settings, lang="en")
+    assert candidate.score >= 70
+    assert any("Amount" in r for r in candidate.reasons)
+    assert any("Expense" in f.detail and "document" in f.detail for f in candidate.factors)
+    assert all("Ausgabe" not in f.detail for f in candidate.factors)
+    assert candidate.factors[0].label == "Amount"
 
 
 def test_filter_unlinked_expenses():
@@ -86,7 +109,13 @@ def test_filter_unlinked_expenses():
     assert [e.id for e in result] == ["2"]
 
 
-def test_filter_expenses_by_year():
+def test_filter_unlinked_documents():
+    settings = Settings(pl_field_expense_number=2)
+    linked = _doc(id=1, custom_fields={2: "EX-001"})
+    open_ = _doc(id=2, custom_fields={2: ""})
+    missing = _doc(id=3, custom_fields={})
+    result = filter_unlinked_documents([linked, open_, missing], settings)
+    assert [d.id for d in result] == [2, 3]
     items = [
         _expense(id="1", date=date(2026, 1, 1)),
         _expense(id="2", date=date(2025, 12, 31)),
@@ -170,4 +199,22 @@ def test_build_matches_combo_off_by_default():
     second = _doc(id=2, custom_fields={9: 22.5}, content="")
     matches = build_matches([expense], [first, second], settings)
     assert matches[0].combos == []
+
+
+def test_combo_details_english():
+    settings = _combo_settings()
+    expense = _expense(amount=42.5)
+    first = _doc(id=1, title="Teil A", custom_fields={9: 20.0}, content="")
+    second = _doc(id=2, title="Teil B", custom_fields={9: 22.5}, content="")
+    matches = build_matches(
+        [expense],
+        [first, second],
+        settings,
+        include_combos=True,
+        lang="en",
+    )
+    combo = matches[0].combos[0]
+    assert any("Sum" in f.detail for f in combo.factors)
+    assert all("Summe" not in f.detail and "Ausgabe" not in f.detail for f in combo.factors)
+    assert combo.factors[0].label == "Amount (sum)"
 

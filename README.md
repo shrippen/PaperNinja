@@ -1,7 +1,7 @@
 # PaperNinja
 
 <p align="center">
-  <img src="docs/logo.png" width="128" height="128" alt="PaperNinja" />
+  <img src="docs/icon.svg" width="128" height="128" alt="PaperNinja" />
 </p>
 
 Companion app that suggests matches between **Invoice Ninja expenses** and
@@ -10,8 +10,8 @@ sides after you confirm.
 
 No matching database — reads and writes happen live via the two APIs. Field
 mapping is ENV-only; **Setup / Felder** shows live custom fields and which
-variables to set. Access is a **password-only login** (set on first start,
-stored as an Argon2id hash in `data/auth.json`).
+variables to set. Access is a **password-only login** (set on first start, stored as an Argon2id
+hash in `data/auth.json`). The UI is **German or English** (default German).
 
 Repository: [github.com/shrippen/PaperNinja](https://github.com/shrippen/PaperNinja)  
 Image: `ghcr.io/shrippen/paperninja:latest` (Alpine)  
@@ -68,7 +68,7 @@ docker compose up -d --build
 4. Use **Zu verknüpfen** (or **Belege** for the reverse queue)
 
 `./data` is mounted at `/app/data` and holds `auth.json`, `vendor_aliases.json`,
-and `audit.log`. Keep this volume.
+`ignore.json`, and `audit.log`. Keep this volume.
 
 ### Reverse proxy
 
@@ -104,6 +104,7 @@ Make the package public under GitHub → Packages → `paperninja` so `docker co
 | Zu verknüpfen | `/match` | Unlinked expenses → suggested documents |
 | Belege zuerst | `/queue` | Unlinked docs with `PL_REVERSE_QUEUE_TAG` → expenses |
 | Verknüpft | `/linked` | Session links; unlink pairs |
+| Ignoriert | `/ignored` | Hidden expenses/documents; restore |
 | Dokument suchen | per expense on `/match` | Manual Paperless search with presets |
 | Passwort | `/password` | Change login password |
 
@@ -111,7 +112,7 @@ Keyboard: `?` for help (`j`/`k`, `Enter`, `s`, `/`, `n`).
 
 ## Configuration
 
-See [`.env.example`](.env.example). Common variables:
+See [`.env.example`](.env.example) and [CHANGELOG.md](CHANGELOG.md). Common variables:
 
 | Variable | Purpose |
 |----------|---------|
@@ -130,12 +131,14 @@ See [`.env.example`](.env.example). Common variables:
 | `MATCH_DATE_WINDOW_DAYS` | Default `7` |
 | `MATCH_AMOUNT_TOLERANCE` | Default `0.02` |
 | `MATCH_MIN_SCORE` | Default `40` |
+| `API_CACHE_TTL_SECONDS` | In-process TTL for API lists (default `180`, `0` = off) |
 
 ## Matching
 
 Scores combine amount, date proximity, vendor/correspondent fuzzy match, and
 invoice number. Only suggestions above `MATCH_MIN_SCORE` are shown. Linking is
-always manual.
+always manual. **Ignore** hides an expense or document from `/match` and `/queue`
+until you restore it on `/ignored`.
 
 Optional **1∶n Sammelbelege** on `/match` (off by default) finds sets of receipts
 whose amounts sum to the expense. Vendor aliases are learned from confirmed

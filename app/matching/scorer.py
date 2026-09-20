@@ -10,7 +10,12 @@ from rapidfuzz import fuzz
 from app.aliases import VendorAliasStore, normalize_name
 from app.clients.invoiceninja import Expense
 from app.clients.paperless import Document
+from app.i18n import supported_lang, t
 from app.settings import Settings
+
+
+def _tx(lang: str, key: str, **kwargs: object) -> str:
+    return t(supported_lang(lang), key, **kwargs)
 
 _AMOUNT_RE = re.compile(
     r"(?<!\d)(\d{1,3}(?:[.\s]\d{3})*(?:[,.]\d{2})|\d+[,.]\d{2})(?!\d)"
@@ -104,6 +109,7 @@ def score_pair(
     document: Document,
     settings: Settings,
     aliases: VendorAliasStore | None = None,
+    lang: str = "de",
 ) -> MatchCandidate:
     factors: list[ScoreFactor] = []
     reasons: list[str] = []
@@ -115,57 +121,85 @@ def score_pair(
     if settings.pl_field_amount is not None:
         doc_amount = parse_amount(document.custom_value(settings.pl_field_amount))
         if doc_amount is not None:
-            amount_source = "Paperless-Betragsfeld"
+            amount_source = _tx(lang, "score_src_field")
     if doc_amount is None:
         haystack = f"{document.title}\n{document.content}"
         for candidate_amount in amounts_from_text(haystack):
             if abs(candidate_amount - expense.amount) <= settings.match_amount_tolerance:
                 doc_amount = candidate_amount
-                amount_source = "OCR/Titel-Text"
+                amount_source = _tx(lang, "score_src_ocr")
                 break
             if abs(candidate_amount - expense.amount) <= max(
                 settings.match_amount_tolerance * 10, 1.0
             ):
                 doc_amount = candidate_amount
-                amount_source = "OCR/Titel-Text (Annäherung)"
+                amount_source = _tx(lang, "score_src_ocr_approx")
                 break
 
+    amount_label = _tx(lang, "factor_amount")
     if doc_amount is not None:
         delta = abs(doc_amount - expense.amount)
         if delta <= settings.match_amount_tolerance:
             points = AMOUNT_MAX
-            detail = (
-                f"Ausgabe {expense.amount:.2f} ≈ Beleg {doc_amount:.2f} "
-                f"(Δ {delta:.2f}, Toleranz {settings.match_amount_tolerance:.2f}, "
-                f"Quelle: {amount_source}) → +{points}"
+            detail = _tx(
+                lang,
+                "score_amount_exact",
+                expense=f"{expense.amount:.2f}",
+                doc=f"{doc_amount:.2f}",
+                delta=f"{delta:.2f}",
+                tol=f"{settings.match_amount_tolerance:.2f}",
+                source=amount_source,
+                points=points,
             )
             score += points
-            reasons.append(f"Betrag {doc_amount:.2f} ≈ {expense.amount:.2f}")
+            reasons.append(
+                _tx(
+                    lang,
+                    "score_reason_amount",
+                    doc=f"{doc_amount:.2f}",
+                    expense=f"{expense.amount:.2f}",
+                )
+            )
             factors.append(
-                ScoreFactor("amount", "Betrag", points, AMOUNT_MAX, detail, True)
+                ScoreFactor("amount", amount_label, points, AMOUNT_MAX, detail, True)
             )
         elif delta <= max(settings.match_amount_tolerance * 10, 1.0):
             points = 15
-            detail = (
-                f"Beträge nah: Ausgabe {expense.amount:.2f} vs Beleg {doc_amount:.2f} "
-                f"(Δ {delta:.2f}, Quelle: {amount_source}) → +{points} "
-                f"(voll nur bei Δ ≤ {settings.match_amount_tolerance:.2f})"
+            detail = _tx(
+                lang,
+                "score_amount_near",
+                expense=f"{expense.amount:.2f}",
+                doc=f"{doc_amount:.2f}",
+                delta=f"{delta:.2f}",
+                source=amount_source,
+                points=points,
+                tol=f"{settings.match_amount_tolerance:.2f}",
             )
             score += points
-            reasons.append(f"Betrag nah ({doc_amount:.2f} vs {expense.amount:.2f})")
+            reasons.append(
+                _tx(
+                    lang,
+                    "score_reason_amount_near",
+                    doc=f"{doc_amount:.2f}",
+                    expense=f"{expense.amount:.2f}",
+                )
+            )
             factors.append(
-                ScoreFactor("amount", "Betrag", points, AMOUNT_MAX, detail, True)
+                ScoreFactor("amount", amount_label, points, AMOUNT_MAX, detail, True)
             )
         else:
             factors.append(
                 ScoreFactor(
                     "amount",
-                    "Betrag",
+                    amount_label,
                     0,
                     AMOUNT_MAX,
-                    (
-                        f"Gefundener Beleg-Betrag {doc_amount:.2f} weicht zu stark von "
-                        f"Ausgabe {expense.amount:.2f} ab (Δ {delta:.2f})."
+                    _tx(
+                        lang,
+                        "score_amount_far",
+                        doc=f"{doc_amount:.2f}",
+                        expense=f"{expense.amount:.2f}",
+                        delta=f"{delta:.2f}",
                     ),
                     False,
                 )
@@ -174,56 +208,70 @@ def score_pair(
         factors.append(
             ScoreFactor(
                 "amount",
-                "Betrag",
+                amount_label,
                 0,
                 AMOUNT_MAX,
-                (
-                    f"Kein Betrag ≈ {expense.amount:.2f} im Beleg gefunden "
-                    f"(Custom Field und OCR/Titel)."
-                ),
+                _tx(lang, "score_amount_missing", expense=f"{expense.amount:.2f}"),
                 False,
             )
         )
 
     # --- Date (max 25) ---
     doc_date = document.created_date or document.added
+    date_label = _tx(lang, "factor_date")
+    missing = _tx(lang, "score_missing")
     if expense.date and doc_date:
         delta_days = abs((expense.date - doc_date).days)
         window = settings.match_date_window_days
         if delta_days <= window:
             proximity = 1 - (delta_days / max(window, 1))
             points = int(10 + 15 * proximity)
-            detail = (
-                f"Ausgabedatum {expense.date} vs Belegdatum {doc_date} "
-                f"(Δ {delta_days} Tag(e), Fenster ±{window}) → +{points} "
-                f"(näher = höher, max {DATE_MAX})"
+            detail = _tx(
+                lang,
+                "score_date_close",
+                expense=expense.date,
+                doc=doc_date,
+                days=delta_days,
+                window=window,
+                points=points,
+                max=DATE_MAX,
             )
             score += points
-            reasons.append(f"Datum ±{delta_days}d")
+            reasons.append(_tx(lang, "score_reason_date", days=delta_days))
             factors.append(
-                ScoreFactor("date", "Datum", points, DATE_MAX, detail, True)
+                ScoreFactor("date", date_label, points, DATE_MAX, detail, True)
             )
         elif delta_days <= window * 2:
             points = 5
-            detail = (
-                f"Datum nur grob passend: Ausgabe {expense.date}, Beleg {doc_date} "
-                f"(Δ {delta_days}d, außerhalb ±{window}, innerhalb ±{window * 2}) → +{points}"
+            detail = _tx(
+                lang,
+                "score_date_wide",
+                expense=expense.date,
+                doc=doc_date,
+                days=delta_days,
+                window=window,
+                outer=window * 2,
+                points=points,
             )
             score += points
-            reasons.append(f"Datum ±{delta_days}d (weit)")
+            reasons.append(_tx(lang, "score_reason_date_wide", days=delta_days))
             factors.append(
-                ScoreFactor("date", "Datum", points, DATE_MAX, detail, True)
+                ScoreFactor("date", date_label, points, DATE_MAX, detail, True)
             )
         else:
             factors.append(
                 ScoreFactor(
                     "date",
-                    "Datum",
+                    date_label,
                     0,
                     DATE_MAX,
-                    (
-                        f"Daten zu weit: Ausgabe {expense.date}, Beleg {doc_date} "
-                        f"(Δ {delta_days}d > ±{window * 2})."
+                    _tx(
+                        lang,
+                        "score_date_far",
+                        expense=expense.date,
+                        doc=doc_date,
+                        days=delta_days,
+                        outer=window * 2,
                     ),
                     False,
                 )
@@ -232,12 +280,14 @@ def score_pair(
         factors.append(
             ScoreFactor(
                 "date",
-                "Datum",
+                date_label,
                 0,
                 DATE_MAX,
-                (
-                    f"Datum unvollständig (Ausgabe: {expense.date or 'fehlt'}, "
-                    f"Beleg: {doc_date or 'fehlt'})."
+                _tx(
+                    lang,
+                    "score_date_incomplete",
+                    expense=expense.date or missing,
+                    doc=doc_date or missing,
                 ),
                 False,
             )
@@ -264,47 +314,61 @@ def score_pair(
                 ratio = fuzz.token_set_ratio(vname, cname)
                 if ratio >= best:
                     best = ratio
-                    best_against = f"Korrespondent „{corr or cname}“"
+                    best_against = _tx(lang, "score_against_correspondent", name=corr or cname)
                     used_alias = vname if normalize_name(vname) != normalize_name(vendor) else ""
             if title:
                 ratio = fuzz.partial_ratio(vname, title)
                 if ratio >= best:
                     best = ratio
-                    best_against = f"Titel „{title[:80]}“"
+                    best_against = _tx(lang, "score_against_title", name=title[:80])
                     used_alias = vname if normalize_name(vname) != normalize_name(vendor) else ""
-        alias_note = f" (Alias „{used_alias}“)" if used_alias else ""
+        alias_note = _tx(lang, "score_alias_note", name=used_alias) if used_alias else ""
+        vendor_label = _tx(lang, "factor_vendor")
         if best >= 85:
             points = VENDOR_MAX
-            detail = (
-                f"Vendor „{vendor}“ ≈ {best_against}{alias_note} "
-                f"(Fuzzy {best}% ≥ 85%) → +{points}"
+            detail = _tx(
+                lang,
+                "score_vendor_strong",
+                vendor=vendor,
+                against=best_against,
+                alias=alias_note,
+                best=best,
+                points=points,
             )
             score += points
-            reasons.append(f"Vendor ~{best}%")
+            reasons.append(_tx(lang, "score_reason_vendor", best=best))
             factors.append(
-                ScoreFactor("vendor", "Vendor", points, VENDOR_MAX, detail, True)
+                ScoreFactor("vendor", vendor_label, points, VENDOR_MAX, detail, True)
             )
         elif best >= 60:
             points = 10
-            detail = (
-                f"Vendor „{vendor}“ teilweise ähnlich zu {best_against}{alias_note} "
-                f"(Fuzzy {best}% ≥ 60%) → +{points}"
+            detail = _tx(
+                lang,
+                "score_vendor_partial",
+                vendor=vendor,
+                against=best_against,
+                alias=alias_note,
+                best=best,
+                points=points,
             )
             score += points
-            reasons.append(f"Vendor ~{best}%")
+            reasons.append(_tx(lang, "score_reason_vendor", best=best))
             factors.append(
-                ScoreFactor("vendor", "Vendor", points, VENDOR_MAX, detail, True)
+                ScoreFactor("vendor", vendor_label, points, VENDOR_MAX, detail, True)
             )
         else:
             factors.append(
                 ScoreFactor(
                     "vendor",
-                    "Vendor",
+                    vendor_label,
                     0,
                     VENDOR_MAX,
-                    (
-                        f"Vendor „{vendor}“ passt schlecht "
-                        f"(bester Fuzzy {best}% gegen {best_against or 'nichts'})."
+                    _tx(
+                        lang,
+                        "score_vendor_weak",
+                        vendor=vendor,
+                        best=best,
+                        against=best_against or _tx(lang, "score_against_none"),
                     ),
                     False,
                 )
@@ -313,10 +377,10 @@ def score_pair(
         factors.append(
             ScoreFactor(
                 "vendor",
-                "Vendor",
+                _tx(lang, "factor_vendor"),
                 0,
                 VENDOR_MAX,
-                "Ausgabe hat keinen Vendor-Namen.",
+                _tx(lang, "score_vendor_missing"),
                 False,
             )
         )
@@ -339,34 +403,39 @@ def score_pair(
             continue
         needle_l = needle.lower()
         if pl_inv and needle_l in pl_inv.lower():
-            invoice_hit, hit_where = needle, "Paperless-Feld Rechnungsnummer"
+            invoice_hit, hit_where = needle, _tx(lang, "score_invoice_where_field")
             break
         if needle_l in (document.title or "").lower():
-            invoice_hit, hit_where = needle, "Dokumenttitel"
+            invoice_hit, hit_where = needle, _tx(lang, "score_invoice_where_title")
             break
         if needle_l in (document.content[:2000] or "").lower():
-            invoice_hit, hit_where = needle, "OCR-Text"
+            invoice_hit, hit_where = needle, _tx(lang, "score_invoice_where_ocr")
             break
 
+    invoice_label = _tx(lang, "factor_invoice")
     if invoice_hit:
         points = INVOICE_MAX
-        detail = (
-            f"Kennung „{invoice_hit}“ gefunden in {hit_where} → +{points}"
+        detail = _tx(
+            lang,
+            "score_invoice_hit",
+            needle=invoice_hit,
+            where=hit_where,
+            points=points,
         )
         score += points
-        reasons.append(f"Rechnungsnr. „{invoice_hit}“")
+        reasons.append(_tx(lang, "score_reason_invoice", needle=invoice_hit))
         factors.append(
-            ScoreFactor("invoice", "Rechnungsnr.", points, INVOICE_MAX, detail, True)
+            ScoreFactor("invoice", invoice_label, points, INVOICE_MAX, detail, True)
         )
     else:
-        searched = ", ".join(f"„{n}“" for n in needles) or "(keine Kennung an Ausgabe)"
+        searched = ", ".join(needles) or _tx(lang, "score_invoice_none")
         factors.append(
             ScoreFactor(
                 "invoice",
-                "Rechnungsnr.",
+                invoice_label,
                 0,
                 INVOICE_MAX,
-                f"Keine der Kennungen {searched} in Feld/Titel/OCR gefunden.",
+                _tx(lang, "score_invoice_miss", searched=searched),
                 False,
             )
         )
@@ -430,6 +499,7 @@ def score_combo(
     sum_amount: float,
     settings: Settings,
     aliases: VendorAliasStore | None = None,
+    lang: str = "de",
 ) -> ComboCandidate:
     documents = [item[0] for item in members]
     amounts = [item[1] for item in members]
@@ -438,14 +508,33 @@ def score_combo(
     score = 0.0
     delta = abs(sum_amount - expense.amount)
     amount_points = AMOUNT_MAX
-    detail = (
-        f"Summe {sum_amount:.2f} aus {len(documents)} Belegen ≈ Ausgabe "
-        f"{expense.amount:.2f} (Δ {delta:.2f}) → +{amount_points}"
+    detail = _tx(
+        lang,
+        "score_combo_amount",
+        sum=f"{sum_amount:.2f}",
+        count=len(documents),
+        expense=f"{expense.amount:.2f}",
+        delta=f"{delta:.2f}",
+        points=amount_points,
     )
     score += amount_points
-    reasons.append(f"Summe {sum_amount:.2f} aus {len(documents)} Belegen")
+    reasons.append(
+        _tx(
+            lang,
+            "score_reason_combo_amount",
+            sum=f"{sum_amount:.2f}",
+            count=len(documents),
+        )
+    )
     factors.append(
-        ScoreFactor("amount", "Betrag (Summe)", amount_points, AMOUNT_MAX, detail, True)
+        ScoreFactor(
+            "amount",
+            _tx(lang, "factor_amount_sum"),
+            amount_points,
+            AMOUNT_MAX,
+            detail,
+            True,
+        )
     )
 
     window = settings.match_date_window_days
@@ -461,32 +550,36 @@ def score_combo(
                 date_points_list.append(5)
             else:
                 date_points_list.append(0)
+    date_label = _tx(lang, "factor_date")
     if date_points_list:
         date_points = int(round(sum(date_points_list) / len(date_points_list)))
         factors.append(
             ScoreFactor(
                 "date",
-                "Datum",
+                date_label,
                 date_points,
                 DATE_MAX,
-                (
-                    f"Mittlere Datumsnähe der {len(documents)} Belege "
-                    f"(Fenster ±{window}) → +{date_points}"
+                _tx(
+                    lang,
+                    "score_combo_date",
+                    count=len(documents),
+                    window=window,
+                    points=date_points,
                 ),
                 date_points > 0,
             )
         )
         score += date_points
         if date_points:
-            reasons.append("Daten im Fenster")
+            reasons.append(_tx(lang, "score_reason_combo_dates"))
     else:
         factors.append(
             ScoreFactor(
                 "date",
-                "Datum",
+                date_label,
                 0,
                 DATE_MAX,
-                "Datum unvollständig für die Belegmenge.",
+                _tx(lang, "score_combo_date_missing"),
                 False,
             )
         )
@@ -497,6 +590,7 @@ def score_combo(
         vendor_names = [n for n in aliases.equivalents(vendor) if n]
     best = 0
     best_against = ""
+    vendor_label = _tx(lang, "factor_vendor")
     if vendor:
         for document in documents:
             corr = (document.correspondent_name or "").strip()
@@ -526,27 +620,31 @@ def score_combo(
         factors.append(
             ScoreFactor(
                 "vendor",
-                "Vendor",
+                vendor_label,
                 vendor_points,
                 VENDOR_MAX,
-                (
-                    f"Bester Vendor-Treffer in der Menge: „{vendor}“ vs "
-                    f"„{best_against or '—'}“ (Fuzzy {best}%) → +{vendor_points}"
+                _tx(
+                    lang,
+                    "score_combo_vendor",
+                    vendor=vendor,
+                    against=best_against or "—",
+                    best=best,
+                    points=vendor_points,
                 ),
                 vendor_points > 0,
             )
         )
         score += vendor_points
         if vendor_points:
-            reasons.append(f"Vendor ~{best}%")
+            reasons.append(_tx(lang, "score_reason_vendor", best=best))
     else:
         factors.append(
             ScoreFactor(
                 "vendor",
-                "Vendor",
+                vendor_label,
                 0,
                 VENDOR_MAX,
-                "Ausgabe hat keinen Vendor-Namen.",
+                _tx(lang, "score_vendor_missing"),
                 False,
             )
         )
@@ -554,10 +652,10 @@ def score_combo(
     factors.append(
         ScoreFactor(
             "invoice",
-            "Rechnungsnr.",
+            _tx(lang, "factor_invoice"),
             0,
             INVOICE_MAX,
-            "1∶n prüft keine einzelne Rechnungsnummer (Sammelbeleg).",
+            _tx(lang, "score_combo_invoice"),
             False,
         )
     )
@@ -577,6 +675,7 @@ def find_combo_candidates(
     documents: list[Document],
     settings: Settings,
     aliases: VendorAliasStore | None = None,
+    lang: str = "de",
 ) -> list[ComboCandidate]:
     target = expense.amount
     tol = settings.match_amount_tolerance
@@ -616,7 +715,8 @@ def find_combo_candidates(
 
     dfs(0, [], 0.0)
     ranked = [
-        score_combo(expense, members, total, settings, aliases) for members, total in raw
+        score_combo(expense, members, total, settings, aliases, lang=lang)
+        for members, total in raw
     ]
     ranked = [item for item in ranked if item.score >= settings.match_min_score]
     ranked.sort(key=lambda item: (-item.score, len(item.documents)))
@@ -629,6 +729,7 @@ def build_matches(
     settings: Settings,
     aliases: VendorAliasStore | None = None,
     include_combos: bool = False,
+    lang: str = "de",
 ) -> list[ExpenseMatch]:
     results: list[ExpenseMatch] = []
     for expense in expenses:
@@ -638,14 +739,16 @@ def build_matches(
                 expense, document, settings.match_date_window_days
             ):
                 continue
-            candidate = score_pair(expense, document, settings, aliases=aliases)
+            candidate = score_pair(
+                expense, document, settings, aliases=aliases, lang=lang
+            )
             if candidate.score >= settings.match_min_score:
                 ranked.append(candidate)
         ranked.sort(key=lambda c: c.score, reverse=True)
         combos: list[ComboCandidate] = []
         if include_combos:
             combos = find_combo_candidates(
-                expense, documents, settings, aliases=aliases
+                expense, documents, settings, aliases=aliases, lang=lang
             )
         results.append(
             ExpenseMatch(
@@ -669,6 +772,7 @@ def build_reverse_matches(
     expenses: list[Expense],
     settings: Settings,
     aliases: VendorAliasStore | None = None,
+    lang: str = "de",
 ) -> list[DocumentMatch]:
     results: list[DocumentMatch] = []
     for document in documents:
@@ -678,7 +782,9 @@ def build_reverse_matches(
                 expense, document, settings.match_date_window_days
             ):
                 continue
-            candidate = score_pair(expense, document, settings, aliases=aliases)
+            candidate = score_pair(
+                expense, document, settings, aliases=aliases, lang=lang
+            )
             if candidate.score >= settings.match_min_score:
                 ranked.append((expense, candidate))
         ranked.sort(key=lambda pair: pair[1].score, reverse=True)

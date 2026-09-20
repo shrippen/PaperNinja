@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Setup / Felder — PaperNinja{% endblock %}
+{% block title %}{{ T.title_setup }} — PaperNinja{% endblock %}
 {% block content %}
 <section class="hero-block">
   <h1>{{ T.hero_setup_title }}</h1>
@@ -14,21 +14,21 @@
 
 <section class="grid-2">
   <article>
-    <h2>Invoice Ninja — Expense Custom Fields</h2>
+    <h2>{{ T.setup_in_title }}</h2>
     <p class="status status-{{ in_status }}">
-      Status:
-      {% if in_status == 'ok' %}verbunden
-      {% elif in_status == 'error' %}Fehler
-      {% else %}URL/Token fehlen{% endif %}
+      {{ T.status_label }}:
+      {% if in_status == 'ok' %}{{ T.status_ok }}
+      {% elif in_status == 'error' %}{{ T.status_error }}
+      {% else %}{{ T.status_missing }}{% endif %}
     </p>
     {% if in_error %}<pre class="errbox">{{ in_error }}</pre>{% endif %}
     {% if in_fields %}
     <table>
       <thead>
         <tr>
-          <th>Label</th>
-          <th>Slot</th>
-          <th>ENV setzen</th>
+          <th>{{ T.setup_th_label }}</th>
+          <th>{{ T.setup_th_slot }}</th>
+          <th>{{ T.setup_th_env }}</th>
         </tr>
       </thead>
       <tbody>
@@ -43,8 +43,8 @@
               {% endfor %}
             </ul>
             <p class="hint">
-              Rechnungsnummer → <code>IN_EXPENSE_FIELD_INVOICE_NUMBER</code><br />
-              Paperless URL → <code>IN_EXPENSE_FIELD_PAPERLESS_URL</code>
+              {{ T.setup_hint_invoice }} <code>IN_EXPENSE_FIELD_INVOICE_NUMBER</code><br />
+              {{ T.setup_hint_url }} <code>IN_EXPENSE_FIELD_PAPERLESS_URL</code>
             </p>
           </td>
         </tr>
@@ -52,27 +52,27 @@
       </tbody>
     </table>
     {% elif in_status == 'ok' %}
-    <p>Keine Custom-Field-Labels gefunden (Slots existieren trotzdem als custom_value1–4).</p>
+    <p>{{ T.setup_no_labels }}</p>
     {% endif %}
   </article>
 
   <article>
-    <h2>Paperless-ngx — Custom Fields</h2>
+    <h2>{{ T.setup_pl_title }}</h2>
     <p class="status status-{{ pl_status }}">
-      Status:
-      {% if pl_status == 'ok' %}verbunden
-      {% elif pl_status == 'error' %}Fehler
-      {% else %}URL/Token fehlen{% endif %}
+      {{ T.status_label }}:
+      {% if pl_status == 'ok' %}{{ T.status_ok }}
+      {% elif pl_status == 'error' %}{{ T.status_error }}
+      {% else %}{{ T.status_missing }}{% endif %}
     </p>
     {% if pl_error %}<pre class="errbox">{{ pl_error }}</pre>{% endif %}
     {% if pl_fields %}
     <table>
       <thead>
         <tr>
-          <th>Name</th>
-          <th>ID</th>
-          <th>Typ</th>
-          <th>ENV setzen</th>
+          <th>{{ T.setup_th_name }}</th>
+          <th>{{ T.setup_th_id }}</th>
+          <th>{{ T.setup_th_type }}</th>
+          <th>{{ T.setup_th_env }}</th>
         </tr>
       </thead>
       <tbody>
@@ -97,20 +97,20 @@
 </section>
 
 <section>
-  <h2>Aktuell geladene ENV</h2>
+  <h2>{{ T.setup_env_title }}</h2>
   <table>
     <thead>
-      <tr><th>Variable</th><th>Wert</th><th>Status</th></tr>
+      <tr><th>{{ T.setup_th_variable }}</th><th>{{ T.setup_th_value }}</th><th>{{ T.setup_th_status }}</th></tr>
     </thead>
     <tbody>
       {% for key, value in env_snapshot.items() %}
       <tr>
         <td><code>{{ key }}</code></td>
-        <td>{% if value is none or value == '' %}<em>nicht gesetzt</em>{% else %}<code>{{ value }}</code>{% endif %}</td>
+        <td>{% if value is none or value == '' %}<em>{{ T.setup_unset }}</em>{% else %}<code>{{ value }}</code>{% endif %}</td>
         <td>
           {% if value is none or value == '' %}
-            {% if key == 'PL_FIELD_AMOUNT' %}<span class="badge">optional</span>{% else %}<span class="badge bad">fehlt</span>{% endif %}
-          {% else %}<span class="badge ok">ok</span>{% endif %}
+            {% if key == 'PL_FIELD_AMOUNT' %}<span class="badge">{{ T.setup_optional }}</span>{% else %}<span class="badge bad">{{ T.setup_missing }}</span>{% endif %}
+          {% else %}<span class="badge ok">{{ T.setup_ok }}</span>{% endif %}
         </td>
       </tr>
       {% endfor %}

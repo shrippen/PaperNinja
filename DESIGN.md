@@ -1,6 +1,6 @@
 # PaperNinja — zentrale Designentscheidungen
 
-Stand: 2026-08-19. Dieses Dokument hält fest, warum die App so gebaut ist,
+Stand: 2026-09-20. Dieses Dokument hält fest, warum die App so gebaut ist,
 nicht nur wie. Abweichungen sollten hier begründet werden.
 
 Pflege: Bei jeder neuen oder geänderten Designentscheidung in derselben Änderung
@@ -143,9 +143,21 @@ Vorschau und direktem Verknüpfen.
 folgen dem gemeinsamen Design-System
 [shrippen/DesignDefault](https://github.com/shrippen/DesignDefault)
 (Gruvbox-Dark-Palette, Rajdhani-Headings, kein Light-Mode auf Landing Pages).
+Die **App** hat bewusst beides: Dark nutzt die DesignDefault-Tokens 1:1, Light ist
+die Light-Palette „Leinen“ (Grund `#f0e9d6`, Karten `#f7f2e4`; Alternative Sand
+`#ebe3cf`), die auch im DesignDefault-Branch `light-palette` steht. Schriften
+Rajdhani (Überschriften, Marke) und JetBrains Mono (Zahlen, Code) liegen als
+WOFF2 unter `/static/fonts` (CSP bleibt `'self'`). Boxen haben die Chamfer-Ecke
+oben rechts (Rahmen aus zwei Flächen, da `border` + `clip-path` die Schräge
+nicht zeichnet). Akzentrollen: Blau = Aktion, Gelb = Score, Orange = aktiver
+Menüpunkt, Aqua/Grün = Balken und Erfolg. Umschalter in der Menüleiste, Wahl in
+`localStorage` (`theme`), Default folgt `prefers-color-scheme`; `data-theme` auf
+`<html>` wird inline im `<head>` gesetzt (kein Flackern). Farben ausschließlich
+über CSS-Variablen in `app.css`. Logo: `icon.svg` (cream) im Dark-Mode,
+`icon-light.svg` (dunkles Quadrat) im Light-Mode.
 App-Icon ist Variante D (Maske mit zwei Dokumenten) mit Cream-Fill (`#E8DCC4`)
 auf abgerundetem Quadrat. Favicon/`apple-touch-icon` unter `/static/`;
-README und GitHub-Social nutzen `docs/logo.png` bzw. `docs/social.png`.
+README und GitHub-Social nutzen `docs/icon.svg` bzw. `docs/social-preview.png`.
 Badges im Format `shields.io` mit `labelColor=1c1c20`, Versionswert `e8dcc4`,
 Tech-Tag `83a598`, Lizenz `a89984`.
 

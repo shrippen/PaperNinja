@@ -10,16 +10,27 @@ from argon2.exceptions import InvalidHashError, VerifyMismatchError
 
 _HASHER = PasswordHasher()
 MIN_PASSWORD_LENGTH = 8
+_DUMMY_HASH: str | None = None
+
+
+def _dummy_hash() -> str:
+    global _DUMMY_HASH
+    if _DUMMY_HASH is None:
+        _DUMMY_HASH = _HASHER.hash("paperninja-dummy-not-a-password")
+    return _DUMMY_HASH
 
 
 class AuthError(Exception):
-    pass
+    def __init__(self, code: str) -> None:
+        self.code = code
+        super().__init__(code)
 
 
 @dataclass(slots=True)
 class AuthState:
     session_secret: str
     password_hash: str | None
+    auth_epoch: int
 
 
 class AuthStore:
@@ -69,10 +80,39 @@ class AuthStore:
         hash_ = data.get("password_hash")
         if hash_ == "":
             hash_ = None
-        return AuthState(session_secret=str(secret), password_hash=hash_)
+        try:
+            epoch = int(data.get("auth_epoch") or 0)
+        except (TypeError, ValueError):
+            epoch = 0
+        return AuthState(
+            session_secret=str(secret),
+            password_hash=hash_,
+            auth_epoch=epoch,
+        )
+
+    def auth_epoch(self) -> int:
+        return self.state().auth_epoch
 
     def has_password(self) -> bool:
         return bool(self.state().password_hash)
+
+    def session_valid(self, session: dict) -> bool:
+        if not session.get("authenticated"):
+            return False
+        stored = self.auth_epoch()
+        got = session.get("auth_epoch")
+        if got is None:
+            return stored == 0
+        try:
+            return int(got) == stored
+        except (TypeError, ValueError):
+            return False
+
+    def _bump_epoch(self, data: dict) -> None:
+        try:
+            data["auth_epoch"] = int(data.get("auth_epoch") or 0) + 1
+        except (TypeError, ValueError):
+            data["auth_epoch"] = 1
 
     def session_secret(self) -> str:
         return self.state().session_secret
@@ -80,23 +120,26 @@ class AuthStore:
     def set_password(self, password: str) -> None:
         cleaned = password.strip()
         if len(cleaned) < MIN_PASSWORD_LENGTH:
-            raise AuthError(
-                f"Passwort muss mindestens {MIN_PASSWORD_LENGTH} Zeichen haben."
-            )
+            raise AuthError("password_too_short")
         data = self._read()
         if not data.get("session_secret"):
             data["session_secret"] = secrets.token_hex(32)
         data["password_hash"] = _HASHER.hash(cleaned)
+        self._bump_epoch(data)
         self._write(data)
 
     def change_password(self, current: str, new: str) -> None:
         if not self.verify(current):
-            raise AuthError("Aktuelles Passwort ist falsch.")
+            raise AuthError("password_current")
         self.set_password(new)
 
     def verify(self, password: str) -> bool:
         stored = self.state().password_hash
         if not stored:
+            try:
+                _HASHER.verify(_dummy_hash(), password or "x")
+            except (VerifyMismatchError, InvalidHashError):
+                pass
             return False
         try:
             return _HASHER.verify(stored, password)

@@ -1,12 +1,21 @@
 <!DOCTYPE html>
-<html lang="de">
-  {% set lang = (request.query_params.get('lang') or request.session.get('lang') or 'de') %}
-  {% if lang not in I18N %}{% set lang = 'de' %}{% endif %}
-  {% set T = I18N[lang] %}
+<html lang="{{ lang }}">
+  {% set T = T or I18N[lang] %}
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{% block title %}PaperNinja{% endblock %}</title>
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem("theme"); } catch (e) {}
+      if (t !== "light" && t !== "dark") {
+        t = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+      document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+  <link rel="icon" type="image/svg+xml" href="/static/icon.svg" />
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="/static/favicon-32.png" sizes="32x32" />
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
@@ -14,12 +23,13 @@
   <meta property="og:description" content="Match Invoice Ninja expenses with Paperless-ngx documents." />
   <meta property="og:image" content="/static/logo.png" />
   <link rel="stylesheet" href="/static/app.css" />
-  <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+  <script src="/static/htmx.min.js" defer></script>
 </head>
 <body class="{% block bodyclass %}{% endblock %}">
   <header class="top">
     <a class="brand" href="{% if login_view | default(false) %}/login{% else %}/match{% endif %}">
-      <img src="/static/logo.png" alt="" width="32" height="32" />
+      <img class="logo-light" src="/static/icon-light.svg" alt="" width="32" height="32" />
+      <img class="logo-dark" src="/static/icon.svg" alt="" width="32" height="32" />
       PaperNinja
     </a>
     {% if not login_view | default(false) %}
@@ -27,20 +37,25 @@
       <a href="/match" class="{% if active == 'match' %}active{% endif %}">{{ T.nav_match }}</a>
       <a href="/queue" class="{% if active == 'queue' %}active{% endif %}">{{ T.nav_queue }}</a>
       <a href="/linked" class="{% if active == 'linked' %}active{% endif %}">{{ T.nav_linked }}</a>
+      <a href="/ignored" class="{% if active == 'ignored' %}active{% endif %}">{{ T.nav_ignored }}</a>
       <a href="/setup" class="{% if active == 'setup' %}active{% endif %}">{{ T.nav_setup }}</a>
       <a href="/password" class="{% if active == 'password' %}active{% endif %}">{{ T.nav_password }}</a>
     </nav>
     <form class="logout" method="post" action="/logout">
-      <button type="submit">Abmelden</button>
+      <button type="submit">{{ T.logout }}</button>
     </form>
     {% endif %}
     <label class="lang">
-      <select id="lang-select" name="lang" aria-label="Language">
-        {% for code, label in {'de':'Deutsch','en':'English','fr':'Français','it':'Italiano','zh':'中文','ja':'日本語','es':'Español'}.items() %}
+      <select id="lang-select" name="lang" aria-label="{{ T.lang_label }}">
+        {% for code, label in {'de':'Deutsch','en':'English'}.items() %}
         <option value="{{ code }}" {% if code == lang %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
     </label>
+    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="{{ T.theme_label }}" title="{{ T.theme_label }}">
+      <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
     <span class="ver">v{{ version }}</span>
   </header>
   <main>
@@ -78,5 +93,17 @@
     })();
   </script>
   {% endif %}
+  <script>
+    (function () {
+      var btn = document.getElementById("theme-toggle");
+      if (!btn) return;
+      btn.addEventListener("click", function () {
+        var root = document.documentElement;
+        var next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+        root.setAttribute("data-theme", next);
+        try { localStorage.setItem("theme", next); } catch (e) {}
+      });
+    })();
+  </script>
 </body>
 </html>

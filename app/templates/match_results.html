@@ -4,20 +4,16 @@
 
 {% if blocked %}
 <div class="flash warn">
-  Mapping unvollständig — <a href="/setup">Setup öffnen</a>.
+  {{ T.blocked_mapping_short }} <a href="/setup">{{ T.open_setup }}</a>
 </div>
 {% else %}
 <p class="meta">
-  Jahr {{ year }} ·
-  {{ expense_count|default(0) }} unlinked Expenses ·
-  {{ document_count|default(0) }} unlinked Dokumente ·
-  Min-Score {{ settings.match_min_score }} ·
-  Datumsfenster ±{{ settings.match_date_window_days }} Tage
-  {% if combo %} · 1∶n Sammelbelege an{% endif %}
+  {{ T.match_meta.replace('{year}', year|string).replace('{expenses}', (expense_count|default(0))|string).replace('{documents}', (document_count|default(0))|string).replace('{min}', settings.match_min_score|string).replace('{window}', settings.match_date_window_days|string) }}
+  {% if combo %} · {{ T.combo_on }}{% endif %}
 </p>
 
 {% if not matches %}
-<div class="flash ok">Nichts Offenes für {{ year }} — oder keine Kandidaten über dem Min-Score.</div>
+<div class="flash ok">{{ T.match_empty.replace('{year}', year|string) }}</div>
 {% endif %}
 
 {% for item in matches %}
@@ -29,14 +25,22 @@
       </a>
     </h2>
     <dl>
-      <div><dt>Betrag</dt><dd>{{ "%.2f"|format(item.expense.amount) }}</dd></div>
-      <div><dt>Datum</dt><dd>{{ item.expense.date or '—' }}</dd></div>
-      <div><dt>Vendor</dt><dd>{{ item.expense.vendor_name or '—' }}</dd></div>
+      <div><dt>{{ T.label_amount }}</dt><dd>{{ "%.2f"|format(item.expense.amount) }}</dd></div>
+      <div><dt>{{ T.label_date }}</dt><dd>{{ item.expense.date or '—' }}</dd></div>
+      <div><dt>{{ T.label_vendor }}</dt><dd>{{ item.expense.vendor_name or '—' }}</dd></div>
     </dl>
+    <form method="post" action="/ignore" class="ignore-form">
+      <input type="hidden" name="kind" value="expense" />
+      <input type="hidden" name="expense_id" value="{{ item.expense.id }}" />
+      <input type="hidden" name="year" value="{{ year }}" />
+      <input type="hidden" name="return_to" value="match" />
+      <input type="hidden" name="combo" value="{% if combo %}1{% endif %}" />
+      <button type="submit" class="ghost">{{ T.ignore_btn }}</button>
+    </form>
   </div>
   <div class="candidates">
     {% if not item.candidates and not item.combos %}
-    <p class="muted">Keine Kandidaten ≥ Min-Score.</p>
+    <p class="muted">{{ T.no_candidates }}</p>
     {% endif %}
     <button
       type="button"
@@ -51,16 +55,16 @@
     {% for combo_item in item.combos %}
     <div class="candidate kb-item combo">
       <div class="cand-head">
-        <span class="combo-badge">1∶n · {{ combo_item.documents|length }} Belege</span>
-        <span class="score" title="Gesamtscore">{{ combo_item.score }}</span>
+        <span class="combo-badge">{{ T.combo_badge.replace('{count}', combo_item.documents|length|string) }}</span>
+        <span class="score">{{ combo_item.score }}</span>
       </div>
       <p class="muted">
-        Summe {{ "%.2f"|format(combo_item.sum_amount) }}
+        {{ T.combo_sum }} {{ "%.2f"|format(combo_item.sum_amount) }}
         {% for amt in combo_item.amounts %}{% if not loop.first %} + {% endif %}{{ "%.2f"|format(amt) }}{% endfor %}
       </p>
       <div class="combo-thumbs">
         {% for doc in combo_item.documents %}
-        <a class="thumb-link" href="{{ settings.document_url(doc.id) }}" target="_blank" rel="noopener" title="In Paperless öffnen">
+        <a class="thumb-link" href="{{ settings.document_url(doc.id) }}" target="_blank" rel="noopener" title="{{ T.open_paperless }}">
           <img class="thumb" src="/preview/{{ doc.id }}/thumb" alt="{{ doc.title or doc.id }}" loading="lazy" />
         </a>
         {% endfor %}
@@ -74,11 +78,11 @@
         {% endfor %}
       </ul>
       <details class="score-details">
-        <summary>Warum diese Menge? ({{ combo_item.score }} / 100)</summary>
+        <summary>{{ T.combo_why.replace('{score}', combo_item.score|string) }}</summary>
         <ul class="factor-list">
           {% for f in combo_item.factors %}
           <li class="{% if f.matched %}hit{% else %}miss{% endif %}">
-            <div class="factor-head"><strong>{{ f.label }}</strong><span class="factor-pts">{{ f.points }} / {{ f.max_points }}</span></div>
+            <div class="factor-head"><strong>{{ T.get('factor_' ~ f.key, f.label) }}</strong><span class="factor-pts">{{ f.points }} / {{ f.max_points }}</span></div>
             <p>{{ f.detail }}</p>
           </li>
           {% endfor %}
@@ -90,7 +94,7 @@
         <input type="hidden" name="year" value="{{ year }}" />
         <input type="hidden" name="return_to" value="match" />
         <input type="hidden" name="combo" value="{% if combo %}1{% endif %}" />
-        <button type="submit">Alle verknüpfen</button>
+        <button type="submit" data-link>{{ T.link_all_btn }}</button>
       </form>
     </div>
     {% endfor %}
@@ -101,7 +105,7 @@
            href="{{ settings.document_url(c.document.id) }}"
            target="_blank"
            rel="noopener"
-           title="In Paperless öffnen">
+           title="{{ T.open_paperless }}">
           <img
             class="thumb"
             src="/preview/{{ c.document.id }}/thumb"
@@ -112,9 +116,9 @@
         <div class="cand-body">
           <div class="cand-head">
             <a href="{{ settings.document_url(c.document.id) }}" target="_blank" rel="noopener">
-              {{ c.document.title or ('Dokument #' ~ c.document.id) }}
+              {{ c.document.title or T.document_fallback.replace('{id}', c.document.id|string) }}
             </a>
-            <span class="score" title="Gesamtscore">{{ c.score }}</span>
+            <span class="score">{{ c.score }}</span>
           </div>
           <p class="muted">
             {{ c.document.correspondent_name or '—' }}
@@ -122,17 +126,13 @@
           </p>
 
           <details class="score-details" {% if loop.first %}open{% endif %}>
-            <summary>Warum dieser Vorschlag? ({{ c.score }} / 100)</summary>
-            <p class="score-intro">
-              Der Score addiert Punkte aus Betrag (max&nbsp;40), Datum (max&nbsp;25),
-              Vendor (max&nbsp;20) und Rechnungsnummer (max&nbsp;30), gedeckelt bei 100.
-              Angezeigt werden nur Treffer ≥ Min-Score {{ settings.match_min_score }}.
-            </p>
+            <summary>{{ T.score_why.replace('{score}', c.score|string) }}</summary>
+            <p class="score-intro">{{ T.score_intro.replace('{min}', settings.match_min_score|string) }}</p>
             <ul class="factor-list">
               {% for f in c.factors %}
               <li class="{% if f.matched %}hit{% else %}miss{% endif %}">
                 <div class="factor-head">
-                  <strong>{{ f.label }}</strong>
+                  <strong>{{ T.get('factor_' ~ f.key, f.label) }}</strong>
                   <span class="factor-pts">{{ f.points }} / {{ f.max_points }}</span>
                 </div>
                 <p>{{ f.detail }}</p>
@@ -144,14 +144,24 @@
             </ul>
           </details>
 
-          <form method="post" action="/link">
-            <input type="hidden" name="expense_id" value="{{ item.expense.id }}" />
-            <input type="hidden" name="document_id" value="{{ c.document.id }}" />
-            <input type="hidden" name="year" value="{{ year }}" />
-            <input type="hidden" name="return_to" value="match" />
-            <input type="hidden" name="combo" value="{% if combo %}1{% endif %}" />
-            <button type="submit">Verknüpfen</button>
-          </form>
+          <div class="cand-actions">
+            <form method="post" action="/link">
+              <input type="hidden" name="expense_id" value="{{ item.expense.id }}" />
+              <input type="hidden" name="document_id" value="{{ c.document.id }}" />
+              <input type="hidden" name="year" value="{{ year }}" />
+              <input type="hidden" name="return_to" value="match" />
+              <input type="hidden" name="combo" value="{% if combo %}1{% endif %}" />
+              <button type="submit" data-link>{{ T.link_btn }}</button>
+            </form>
+            <form method="post" action="/ignore" class="ignore-form">
+              <input type="hidden" name="kind" value="document" />
+              <input type="hidden" name="document_id" value="{{ c.document.id }}" />
+              <input type="hidden" name="year" value="{{ year }}" />
+              <input type="hidden" name="return_to" value="match" />
+              <input type="hidden" name="combo" value="{% if combo %}1{% endif %}" />
+              <button type="submit" class="ghost">{{ T.ignore_btn }}</button>
+            </form>
+          </div>
         </div>
       </div>
     </div>

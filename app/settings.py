@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     match_amount_tolerance: float = Field(default=0.02, ge=0)
     match_min_score: int = Field(default=40, ge=0, le=100)
     match_top_n: int = Field(default=5, ge=1, le=20)
+    api_cache_ttl_seconds: int = Field(default=180, ge=0)
 
     in_expense_url_template: str = "{base}/expenses/{id}/edit"
     pl_document_url_template: str = "{base}/documents/{id}/"

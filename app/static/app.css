@@ -1,19 +1,89 @@
+@font-face {
+  font-family: "Rajdhani";
+  font-weight: 500;
+  font-display: swap;
+  src: url("/static/fonts/Rajdhani-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Rajdhani";
+  font-weight: 600;
+  font-display: swap;
+  src: url("/static/fonts/Rajdhani-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Rajdhani";
+  font-weight: 700;
+  font-display: swap;
+  src: url("/static/fonts/Rajdhani-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: 400;
+  font-display: swap;
+  src: url("/static/fonts/JetBrainsMono-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: 500;
+  font-display: swap;
+  src: url("/static/fonts/JetBrainsMono-500.woff2") format("woff2");
+}
+
+/* Light: warm paper (Gruvbox light, angelehnt an DesignDefault).
+   Dark: Gruvbox-Dark-Palette aus DesignDefault. Umschaltung über
+   data-theme auf <html> (base.html setzt es vor dem ersten Paint). */
 :root {
-  --bg: #f3efe6;
-  --ink: #1c1914;
-  --muted: #5c564c;
-  --card: #fffdf8;
-  --line: #d9d0c0;
-  --accent: #0f6b5c;
-  --accent-ink: #f4fffb;
-  --warn: #8a5a00;
-  --warn-bg: #fff3d6;
-  --err: #8b1e1e;
-  --err-bg: #fde8e8;
-  --ok: #1d5c38;
-  --ok-bg: #e3f6ea;
-  --font: "IBM Plex Sans", "Segoe UI", sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  color-scheme: light;
+  --bg: #f0e9d6;
+  --bg-glow-1: #e9e0c6;
+  --bg-glow-2: #f3e6c4;
+  --ink: #3c3836;
+  --muted: #665c54;
+  --card: #f7f2e4;
+  --field: #fbf8ee;
+  --sunk: #e6dec6;
+  --line: #d3c8ac;
+  --accent: #076678;
+  --accent-2: #427b58;
+  --accent-ink: #fbf1c7;
+  --score: #8a5a00;
+  --hl: #af3a03;
+  --cut: 16px;
+  --warn: #7c4a03;
+  --warn-bg: #f7e0a0;
+  --err: #9d0006;
+  --err-bg: #f9d9c4;
+  --ok: #4f5d0a;
+  --ok-bg: #e4e6b4;
+  --shadow: rgba(60, 56, 54, 0.12);
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --head: "Rajdhani", -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", "Fira Code", ui-monospace, Consolas, monospace;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #141312;
+  --bg-glow-1: #1d2021;
+  --bg-glow-2: #2a2420;
+  --ink: #ebdbb2;
+  --muted: #a89984;
+  --card: #2a2826;
+  --field: #1d2021;
+  --sunk: #1d2021;
+  --line: #504945;
+  --accent: #83a598;
+  --accent-2: #8ec07c;
+  --accent-ink: #1d2021;
+  --score: #fabd2f;
+  --hl: #fe8019;
+  --warn: #fabd2f;
+  --warn-bg: #3a3018;
+  --err: #ff7a66;
+  --err-bg: #3d2320;
+  --ok: #8ec07c;
+  --ok-bg: #26301f;
+  --shadow: rgba(0, 0, 0, 0.5);
 }
 
 * { box-sizing: border-box; }
@@ -23,8 +93,8 @@ body {
   font-family: var(--font);
   color: var(--ink);
   background:
-    radial-gradient(circle at 10% 0%, #e7f2ee 0%, transparent 40%),
-    radial-gradient(circle at 90% 10%, #f7e8d4 0%, transparent 35%),
+    radial-gradient(circle at 10% 0%, var(--bg-glow-1) 0%, transparent 40%),
+    radial-gradient(circle at 90% 10%, var(--bg-glow-2) 0%, transparent 35%),
     var(--bg);
   min-height: 100vh;
 }
@@ -64,7 +134,8 @@ nav a {
   text-decoration: none;
   font-size: 0.95rem;
 }
-nav a.active, nav a:hover { color: var(--accent); }
+nav a.active { color: var(--hl); }
+nav a:hover { color: var(--accent); }
 
 .ver { color: var(--muted); font-size: 0.8rem; font-family: var(--mono); margin-left: auto; }
 
@@ -99,7 +170,7 @@ body.login-page main {
   padding: 0.5rem 0.65rem;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--field);
   margin-bottom: 0.35rem;
 }
 .login-form button { margin-top: 0.4rem; justify-self: start; }
@@ -187,7 +258,7 @@ th, td {
 code, .copy {
   font-family: var(--mono);
   font-size: 0.8rem;
-  background: #efe9dc;
+  background: var(--sunk);
   padding: 0.1rem 0.3rem;
   border-radius: 4px;
 }
@@ -209,7 +280,7 @@ code, .copy {
   padding: 0.1rem 0.45rem;
   border-radius: 999px;
   font-size: 0.75rem;
-  background: #efe9dc;
+  background: var(--sunk);
 }
 .badge.ok { background: var(--ok-bg); color: var(--ok); }
 .badge.bad { background: var(--err-bg); color: var(--err); }
@@ -239,7 +310,7 @@ code, .copy {
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 0.75rem;
-  background: #fff;
+  background: var(--field);
 }
 .cand-head {
   display: flex;
@@ -252,7 +323,7 @@ code, .copy {
 .score {
   font-family: var(--mono);
   font-weight: 700;
-  color: var(--accent);
+  color: var(--score);
 }
 .reasons { margin: 0.35rem 0; font-size: 0.9rem; }
 .muted { color: var(--muted); font-size: 0.85rem; margin: 0.25rem 0 0.6rem; }
@@ -304,7 +375,7 @@ a { color: var(--accent); }
   padding: 0.35rem 0.5rem;
   border-radius: 6px;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--field);
 }
 
 .year-bar > .muted {
@@ -370,7 +441,7 @@ a { color: var(--accent); }
 }
 .progress-track {
   height: 8px;
-  background: #efe9dc;
+  background: var(--sunk);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -378,7 +449,7 @@ a { color: var(--accent); }
   height: 100%;
   width: 40%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--accent), #3aa68f, var(--accent));
+  background: linear-gradient(90deg, var(--accent-2), var(--accent), var(--accent-2));
   background-size: 200% 100%;
   animation: slide 1.1s ease-in-out infinite;
 }
@@ -403,7 +474,7 @@ a { color: var(--accent); }
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid var(--line);
-  background: #efe9dc;
+  background: var(--sunk);
   aspect-ratio: 3 / 4;
 }
 .thumb {
@@ -418,7 +489,7 @@ a { color: var(--accent); }
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 0.35rem 0.65rem 0.65rem;
-  background: #faf7f0;
+  background: var(--sunk);
 }
 .score-details summary {
   cursor: pointer;
@@ -440,7 +511,7 @@ a { color: var(--accent); }
 .factor-list li {
   padding: 0.5rem 0.6rem;
   border-radius: 6px;
-  background: #fff;
+  background: var(--field);
   border: 1px solid var(--line);
 }
 .factor-list li.hit { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
@@ -454,7 +525,7 @@ a { color: var(--accent); }
 .factor-pts {
   font-family: var(--mono);
   font-size: 0.85rem;
-  color: var(--accent);
+  color: var(--score);
 }
 .factor-list p {
   margin: 0 0 0.45rem;
@@ -463,14 +534,14 @@ a { color: var(--accent); }
 }
 .factor-bar {
   height: 5px;
-  background: #efe9dc;
+  background: var(--sunk);
   border-radius: 999px;
   overflow: hidden;
 }
 .factor-bar span {
   display: block;
   height: 100%;
-  background: var(--accent);
+  background: var(--accent-2);
   border-radius: 999px;
 }
 
@@ -479,7 +550,7 @@ a { color: var(--accent); }
   padding: 0.75rem;
   border: 1px dashed var(--line);
   border-radius: 8px;
-  background: #faf7f0;
+  background: var(--sunk);
 }
 .search-form { display: grid; gap: 0.65rem; }
 .search-row {
@@ -530,7 +601,7 @@ a { color: var(--accent); }
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 24px var(--shadow);
   z-index: 20;
 }
 .kb-help h2 {
@@ -563,3 +634,113 @@ button.danger:hover {
   background: color-mix(in srgb, var(--err) 12%, var(--err-bg));
 }
 
+button.ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  font-weight: 500;
+}
+button.ghost:hover {
+  color: var(--ink);
+  filter: none;
+  background: color-mix(in srgb, var(--card) 70%, var(--line));
+}
+
+.cand-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+.ignore-form { margin-top: 0.6rem; }
+.ignore-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem;
+}
+.ignore-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+
+/* Logo: helles Icon auf dunklem Grund, dunkles Icon auf hellem Grund. */
+.brand .logo-dark { display: none; }
+:root[data-theme="dark"] .brand .logo-light { display: none; }
+:root[data-theme="dark"] .brand .logo-dark { display: inline; }
+
+button.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+button.theme-toggle:hover { color: var(--ink); filter: none; }
+button.theme-toggle svg { width: 1.1rem; height: 1.1rem; }
+button.theme-toggle .i-sun { display: none; }
+:root[data-theme="dark"] button.theme-toggle .i-sun { display: block; }
+:root[data-theme="dark"] button.theme-toggle .i-moon { display: none; }
+
+.lang select {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.5rem;
+  color: var(--ink);
+  background: var(--field);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+/* Überschriften und Marke in Rajdhani (Design-System), Zahlen/IDs in JetBrains Mono. */
+h1, h2, h3, .brand { font-family: var(--head); }
+h1, h2, h3 { letter-spacing: 0.01em; }
+.brand { font-size: 1.35rem; letter-spacing: 0.01em; }
+h2 { font-size: 1.35rem; }
+.hero-block h1 { font-size: 2.2rem; letter-spacing: 0.01em; }
+.login-card h1 { letter-spacing: 0.01em; font-size: 2rem; }
+
+/* Chamfer: Ecke oben rechts abgeschnitten. Der Rahmen entsteht aus zwei
+   übereinanderliegenden Flächen, weil border + clip-path die Schräge nicht
+   mitzeichnet. */
+article, .login-card, .candidate, .year-bar, .loading-panel, .kb-help {
+  position: relative;
+  isolation: isolate;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.kb-help { position: fixed; }
+article::before, .login-card::before, .candidate::before,
+.year-bar::before, .loading-panel::before, .kb-help::before,
+article::after, .login-card::after, .candidate::after,
+.year-bar::after, .loading-panel::after, .kb-help::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+}
+article::before, .login-card::before, .candidate::before,
+.year-bar::before, .loading-panel::before, .kb-help::before {
+  inset: 0;
+  background: var(--line);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
+}
+article::after, .login-card::after, .candidate::after,
+.year-bar::after, .loading-panel::after, .kb-help::after {
+  inset: 1px;
+  background: var(--fill, var(--card));
+  clip-path: polygon(0 0, calc(100% - var(--cut) - 0.41px) 0, 100% calc(var(--cut) + 0.41px), 100% 100%, 0 100%);
+}
+.candidate { --fill: var(--field); --cut: 12px; }
+.year-bar, .loading-panel { --cut: 12px; }

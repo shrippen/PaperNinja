@@ -6,6 +6,7 @@ from typing import Any
 
 from app.clients.invoiceninja import Expense, InvoiceNinjaClient
 from app.clients.paperless import Document, PaperlessClient
+from app.lists import cached_expenses
 from app.session_links import session_links
 from app.settings import Settings
 from app.urls import document_ids_from_url, paperless_url_of
@@ -47,7 +48,7 @@ async def list_linked_pairs(
             )
         return out, "session"
 
-    expenses = await in_client.list_expenses()
+    expenses = await cached_expenses(in_client, settings)
     linked: list[tuple[Expense, int]] = []
     for expense in expenses:
         url = paperless_url_of(expense, settings)

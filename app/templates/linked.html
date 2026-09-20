@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Verknüpft — PaperNinja{% endblock %}
+{% block title %}{{ T.title_linked }} — PaperNinja{% endblock %}
 {% block content %}
 <section class="hero-block">
   <h1>{{ T.hero_linked_title }}</h1>
@@ -13,7 +13,7 @@
 </section>
 
 {% if not pairs %}
-<div class="flash ok">Keine verknüpften Paare gefunden.</div>
+<div class="flash ok">{{ T.linked_empty }}</div>
 {% endif %}
 
 {% for pair in pairs %}
@@ -25,11 +25,11 @@
       </a>
     </h2>
     <dl>
-      <div><dt>Betrag</dt><dd>{{ "%.2f"|format(pair.expense.amount) }}</dd></div>
-      <div><dt>Datum</dt><dd>{{ pair.expense.date or '—' }}</dd></div>
-      <div><dt>Vendor</dt><dd>{{ pair.expense.vendor_name or '—' }}</dd></div>
+      <div><dt>{{ T.label_amount }}</dt><dd>{{ "%.2f"|format(pair.expense.amount) }}</dd></div>
+      <div><dt>{{ T.label_date }}</dt><dd>{{ pair.expense.date or '—' }}</dd></div>
+      <div><dt>{{ T.label_vendor }}</dt><dd>{{ pair.expense.vendor_name or '—' }}</dd></div>
       {% if pair.linked_at %}
-      <div><dt>Verknüpft</dt><dd>{{ pair.linked_at }}</dd></div>
+      <div><dt>{{ T.label_linked_at }}</dt><dd>{{ pair.linked_at }}</dd></div>
       {% endif %}
     </dl>
   </div>
@@ -37,13 +37,13 @@
     {% if pair.document %}
     <div class="candidate">
       <div class="cand-layout">
-        <a class="thumb-link" href="{{ settings.document_url(pair.document.id) }}" target="_blank" rel="noopener" title="In Paperless öffnen">
+        <a class="thumb-link" href="{{ settings.document_url(pair.document.id) }}" target="_blank" rel="noopener" title="{{ T.open_paperless }}">
           <img class="thumb" src="/preview/{{ pair.document.id }}/thumb" alt="" loading="lazy" />
         </a>
         <div class="cand-body">
           <div class="cand-head">
             <a href="{{ settings.document_url(pair.document.id) }}" target="_blank" rel="noopener">
-              {{ pair.document.title or ('Dokument #' ~ pair.document.id) }}
+              {{ pair.document.title or T.document_fallback.replace('{id}', pair.document.id|string) }}
             </a>
           </div>
           <p class="muted">
@@ -53,13 +53,13 @@
           <form method="post" action="/unlink">
             <input type="hidden" name="expense_id" value="{{ pair.expense.id }}" />
             <input type="hidden" name="document_id" value="{{ pair.document.id }}" />
-            <button type="submit" class="danger">Entkoppeln</button>
+            <button type="submit" class="danger">{{ T.unlink_btn }}</button>
           </form>
         </div>
       </div>
     </div>
     {% else %}
-    <p class="muted">Dokument nicht gefunden (ID aus Paperless-URL).</p>
+    <p class="muted">{{ T.document_missing }}</p>
     {% endif %}
   </div>
 </article>

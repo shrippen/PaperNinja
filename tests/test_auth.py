@@ -22,8 +22,26 @@ def test_set_and_verify_password(tmp_path: Path) -> None:
 
 def test_password_too_short(tmp_path: Path) -> None:
     store = AuthStore(tmp_path / "auth.json")
-    with pytest.raises(AuthError):
+    with pytest.raises(AuthError) as exc:
         store.set_password("x" * (MIN_PASSWORD_LENGTH - 1))
+    assert exc.value.code == "password_too_short"
+
+
+def test_verify_without_password_is_false(tmp_path: Path) -> None:
+    store = AuthStore(tmp_path / "auth.json")
+    assert store.verify("anything-long") is False
+    assert store.has_password() is False
+    assert store.auth_epoch() == 0
+
+
+def test_password_change_bumps_epoch(tmp_path: Path) -> None:
+    store = AuthStore(tmp_path / "auth.json")
+    store.set_password("correct-horse")
+    first = store.auth_epoch()
+    store.change_password("correct-horse", "other-horse")
+    assert store.auth_epoch() == first + 1
+    assert store.session_valid({"authenticated": True, "auth_epoch": first}) is False
+    assert store.session_valid({"authenticated": True, "auth_epoch": store.auth_epoch()})
 
 
 def test_session_secret_stable(tmp_path: Path) -> None:

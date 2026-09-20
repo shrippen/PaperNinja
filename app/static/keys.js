@@ -67,7 +67,7 @@
       const card = document.activeElement && document.activeElement.closest
         ? document.activeElement.closest(".kb-item")
         : null;
-      const btn = card && card.querySelector("form button[type=submit], form button:not(.danger)");
+      const btn = card && card.querySelector("button[data-link]");
       if (btn && document.activeElement.tagName !== "A") {
         event.preventDefault();
         btn.click();

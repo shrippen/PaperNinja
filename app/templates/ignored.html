@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ T.title_ignored }} — PaperNinja{% endblock %}
+{% block content %}
+<section class="hero-block">
+  <h1>{{ T.hero_ignored_title }}</h1>
+  <p>{{ T.hero_ignored_desc }}</p>
+</section>
+
+{% if not expense_ids and not document_ids %}
+<div class="flash ok">{{ T.ignored_empty }}</div>
+{% endif %}
+
+{% if expense_ids %}
+<section>
+  <h2>{{ T.ignored_expenses }}</h2>
+  <ul class="ignore-list">
+    {% for eid in expense_ids %}
+    <li>
+      <code>{{ eid }}</code>
+      <form method="post" action="/unignore">
+        <input type="hidden" name="kind" value="expense" />
+        <input type="hidden" name="expense_id" value="{{ eid }}" />
+        <button type="submit" class="ghost">{{ T.unignore_btn }}</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if document_ids %}
+<section>
+  <h2>{{ T.ignored_documents }}</h2>
+  <ul class="ignore-list">
+    {% for did in document_ids %}
+    <li>
+      <code>{{ did }}</code>
+      <form method="post" action="/unignore">
+        <input type="hidden" name="kind" value="document" />
+        <input type="hidden" name="document_id" value="{{ did }}" />
+        <button type="submit" class="ghost">{{ T.unignore_btn }}</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

@@ -13,34 +13,34 @@
         type="search"
         name="q"
         value="{{ q }}"
-        placeholder="Volltext, Titel, Rechnungsnr. …"
-        aria-label="Suche"
+        placeholder="{{ T.search_placeholder }}"
+        aria-label="{{ T.search_aria }}"
       />
-      <button type="submit">Suchen</button>
+      <button type="submit">{{ T.search_submit }}</button>
     </div>
     <div class="preset-row">
-      {% for key, label in presets %}
-      <button type="submit" name="preset" value="{{ key }}" class="preset {% if preset == key %}active{% endif %}">{{ label }}</button>
+      {% for key in presets %}
+      <button type="submit" name="preset" value="{{ key }}" class="preset {% if preset == key %}active{% endif %}">{{ T['preset_' ~ key] }}</button>
       {% endfor %}
     </div>
     <div class="search-filters">
-      <label><input type="checkbox" name="unlinked_only" value="1" {% if unlinked_only %}checked{% endif %} /> nur unlinked</label>
-      <label>von <input type="date" name="date_from" value="{{ date_from }}" /></label>
-      <label>bis <input type="date" name="date_to" value="{{ date_to }}" /></label>
-      <label>Korrespondent <input type="text" name="correspondent" value="{{ correspondent }}" /></label>
+      <label><input type="checkbox" name="unlinked_only" value="1" {% if unlinked_only %}checked{% endif %} /> {{ T.search_unlinked }}</label>
+      <label>{{ T.search_from }} <input type="date" name="date_from" value="{{ date_from }}" /></label>
+      <label>{{ T.search_to }} <input type="date" name="date_to" value="{{ date_to }}" /></label>
+      <label>{{ T.search_correspondent }} <input type="text" name="correspondent" value="{{ correspondent }}" /></label>
     </div>
   </form>
-  <div id="search-ind-{{ expense.id }}" class="htmx-indicator muted">Suche …</div>
+  <div id="search-ind-{{ expense.id }}" class="htmx-indicator muted">{{ T.search_busy }}</div>
   {% if error %}
   <p class="flash err">{{ error }}</p>
   {% elif searched %}
     {% if not hits %}
-    <p class="muted">Keine Treffer.</p>
+    <p class="muted">{{ T.search_none }}</p>
     {% endif %}
     {% for doc in hits %}
     <div class="candidate kb-item">
       <div class="cand-layout">
-        <a class="thumb-link" href="{{ settings.document_url(doc.id) }}" target="_blank" rel="noopener" title="In Paperless öffnen">
+        <a class="thumb-link" href="{{ settings.document_url(doc.id) }}" target="_blank" rel="noopener" title="{{ T.open_paperless }}">
           <img class="thumb" src="/preview/{{ doc.id }}/thumb" alt="" loading="lazy" />
         </a>
         <div class="cand-body">
@@ -53,7 +53,7 @@
             <input type="hidden" name="document_id" value="{{ doc.id }}" />
             <input type="hidden" name="year" value="{{ year }}" />
             <input type="hidden" name="return_to" value="match" />
-            <button type="submit">Verknüpfen</button>
+            <button type="submit" data-link>{{ T.link_btn }}</button>
           </form>
         </div>
       </div>

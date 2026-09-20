@@ -8,6 +8,7 @@ from fastapi import HTTPException
 from app.aliases import VendorAliasStore
 from app.audit import AuditLog
 from app.auth import AuthStore
+from app.ignores import IgnoreStore
 from app.clients.invoiceninja import InvoiceNinjaClient
 from app.clients.paperless import PaperlessClient
 from app.settings import Settings, get_settings
@@ -23,6 +24,10 @@ def pl_client(settings: Settings) -> PaperlessClient:
 
 def alias_store(settings: Settings) -> VendorAliasStore:
     return VendorAliasStore(Path(settings.data_dir) / "vendor_aliases.json")
+
+
+def ignore_store(settings: Settings) -> IgnoreStore:
+    return IgnoreStore(Path(settings.data_dir) / "ignore.json")
 
 
 def audit_log(settings: Settings) -> AuditLog:
