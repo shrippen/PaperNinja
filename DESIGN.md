@@ -33,7 +33,8 @@ bestehenden Custom Fields beider Systeme.
   Lernen, Ausblenden und Nachvollziehbarkeit.
 - **Deploy:** Alpine-basiertes Docker-Image. Zwei getrennte Pipelines:
   auf Gitea `.gitea/workflows/ci.yml` (pytest, dann Build linux/amd64 in die
-  Container-Registry von `git.arianw.de`), auf dem GitHub-Mirror
+  Container-Registry von `git.arianw.de`; Tags nur `nightly` (Push auf `main`),
+  Versionsnummer und `latest` (bei `v*`-Tag), keine `sha-`-Tags), auf dem GitHub-Mirror
   `.github/workflows/docker-publish.yml` (pytest, dann Multi-Arch amd64+arm64
   nach `ghcr.io/shrippen/paperninja`). Gitea ignoriert `.github/workflows`, sobald
   `.gitea/workflows` existiert, GitHub kennt `.gitea` nicht. README und Compose

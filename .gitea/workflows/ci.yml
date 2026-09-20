@@ -1,4 +1,5 @@
-# Tests bei jedem Push und PR; Image-Build nur für main und v*-Tags.
+# Tests bei jedem Push und PR; Image-Build nur für main (nightly) und v*-Tags
+# (Versionsnummer + latest).
 # Das Image landet in der Gitea-Container-Registry dieser Instanz.
 # Login: Secret REGISTRY_TOKEN (write:package), sonst der Job-Token.
 
@@ -36,6 +37,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Tags: main -> nightly; v1.2.3 -> 1.2.3 und latest (Vorabversionen wie
+      # v1.2.3-rc1 bekommen nur ihre Versionsnummer).
       - name: Image-Koordinaten bestimmen
         id: img
         run: |
@@ -44,20 +47,22 @@ jobs:
           echo "host=${host}" >> "$GITHUB_OUTPUT"
           echo "image=${host}/${repo}" >> "$GITHUB_OUTPUT"
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            echo "tag=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+            version="${GITHUB_REF_NAME#v}"
+            tags="${version}"
+            case "${version}" in *-*) ;; *) tags="${tags} latest" ;; esac
           else
-            echo "tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+            tags="nightly"
           fi
+          echo "tags=${tags}" >> "$GITHUB_OUTPUT"
 
       - name: Login, Build, Push
         env:
           REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN || github.token }}
         run: |
+          image="${{ steps.img.outputs.image }}"
           echo "${REGISTRY_TOKEN}" \
             | docker login "${{ steps.img.outputs.host }}" -u "${{ github.actor }}" --password-stdin
-          docker build \
-            -t "${{ steps.img.outputs.image }}:${{ steps.img.outputs.tag }}" \
-            -t "${{ steps.img.outputs.image }}:latest" \
-            .
-          docker push "${{ steps.img.outputs.image }}:${{ steps.img.outputs.tag }}"
-          docker push "${{ steps.img.outputs.image }}:latest"
+          args=()
+          for t in ${{ steps.img.outputs.tags }}; do args+=(-t "${image}:${t}"); done
+          docker build "${args[@]}" .
+          for t in ${{ steps.img.outputs.tags }}; do docker push "${image}:${t}"; done
