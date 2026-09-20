@@ -147,7 +147,7 @@ Vorschau und direktem Verknüpfen.
 
 **Visuelles Design:** Farben, Typografie, Icon-Stil und Landing-Page-Layout
 folgen dem gemeinsamen Design-System
-[shrippen/DesignDefault](https://github.com/shrippen/DesignDefault)
+[shrippen/shrippen.github.io](https://github.com/shrippen/shrippen.github.io)
 (Gruvbox-Dark-Palette, Rajdhani-Headings, kein Light-Mode auf Landing Pages).
 Die **App** hat bewusst beides: Dark nutzt die DesignDefault-Tokens 1:1, Light ist
 die Light-Palette „Leinen“ (Grund `#f0e9d6`, Karten `#f7f2e4`; Alternative Sand
