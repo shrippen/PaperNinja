@@ -1,7 +1,7 @@
 # PaperNinja
 
 <p align="center">
-  <img src="docs/logo.png" width="128" height="128" alt="PaperNinja" />
+  <img src="docs/icon.svg" width="128" height="128" alt="PaperNinja" />
 </p>
 
 Companion app that suggests matches between **Invoice Ninja expenses** and

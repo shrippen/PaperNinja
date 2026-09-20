@@ -145,7 +145,7 @@ folgen dem gemeinsamen Design-System
 (Gruvbox-Dark-Palette, Rajdhani-Headings, kein Light-Mode auf Landing Pages).
 App-Icon ist Variante D (Maske mit zwei Dokumenten) mit Cream-Fill (`#E8DCC4`)
 auf abgerundetem Quadrat. Favicon/`apple-touch-icon` unter `/static/`;
-README und GitHub-Social nutzen `docs/logo.png` bzw. `docs/social.png`.
+README und GitHub-Social nutzen `docs/icon.svg` bzw. `docs/social-preview.png`.
 Badges im Format `shields.io` mit `labelColor=1c1c20`, Versionswert `e8dcc4`,
 Tech-Tag `83a598`, Lizenz `a89984`.
 
