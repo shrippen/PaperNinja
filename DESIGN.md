@@ -31,9 +31,10 @@ bestehenden Custom Fields beider Systeme.
   Vendor-Aliase (`vendor_aliases.json`), Ignorieren-Liste (`ignore.json`),
   Audit-Log (`audit.log`). Das ist kein Matching-State, nur Zugangsschutz,
   Lernen, Ausblenden und Nachvollziehbarkeit.
-- **Deploy:** Alpine-basiertes Docker-Image auf GHCR
-  (`ghcr.io/shrippen/paperninja`), gebaut per GitHub Action (linux/amd64 +
-  arm64). Compose mit `env_file` und Volume für `data/`.
+- **Deploy:** Alpine-basiertes Docker-Image (linux/amd64), gebaut per Gitea
+  Action (`.gitea/workflows/ci.yml`: erst pytest, dann Build) und in die
+  Container-Registry von `git.arianw.de` gepusht. Compose mit `env_file` und
+  Volume für `data/`.
 
 ```
 Browser  →  PaperNinja (FastAPI)

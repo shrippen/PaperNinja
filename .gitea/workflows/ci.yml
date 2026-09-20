@@ -1,0 +1,63 @@
+# Tests bei jedem Push und PR; Image-Build nur für main und v*-Tags.
+# Das Image landet in der Gitea-Container-Registry dieser Instanz.
+# Login: Secret REGISTRY_TOKEN (write:package), sonst der Job-Token.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Abhängigkeiten
+        run: pip install -r requirements-dev.txt
+
+      - name: Tests
+        run: pytest -q
+
+  image:
+    needs: test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Image-Koordinaten bestimmen
+        id: img
+        run: |
+          host="${GITHUB_SERVER_URL#*://}"
+          repo="$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')"
+          echo "host=${host}" >> "$GITHUB_OUTPUT"
+          echo "image=${host}/${repo}" >> "$GITHUB_OUTPUT"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "tag=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Login, Build, Push
+        env:
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN || github.token }}
+        run: |
+          echo "${REGISTRY_TOKEN}" \
+            | docker login "${{ steps.img.outputs.host }}" -u "${{ github.actor }}" --password-stdin
+          docker build \
+            -t "${{ steps.img.outputs.image }}:${{ steps.img.outputs.tag }}" \
+            -t "${{ steps.img.outputs.image }}:latest" \
+            .
+          docker push "${{ steps.img.outputs.image }}:${{ steps.img.outputs.tag }}"
+          docker push "${{ steps.img.outputs.image }}:latest"
