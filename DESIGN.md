@@ -141,7 +141,7 @@ Vorschau und direktem Verknüpfen.
 
 **Visuelles Design:** Farben, Typografie, Icon-Stil und Landing-Page-Layout
 folgen dem gemeinsamen Design-System
-[shrippen/DesignDefault](https://github.com/shrippen/DesignDefault)
+[shrippen/shrippen.github.io](https://github.com/shrippen/shrippen.github.io)
 (Gruvbox-Dark-Palette, Rajdhani-Headings, kein Light-Mode auf Landing Pages).
 App-Icon ist Variante D (Maske mit zwei Dokumenten) mit Cream-Fill (`#E8DCC4`)
 auf abgerundetem Quadrat. Favicon/`apple-touch-icon` unter `/static/`;
