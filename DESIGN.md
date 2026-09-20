@@ -31,10 +31,14 @@ bestehenden Custom Fields beider Systeme.
   Vendor-Aliase (`vendor_aliases.json`), Ignorieren-Liste (`ignore.json`),
   Audit-Log (`audit.log`). Das ist kein Matching-State, nur Zugangsschutz,
   Lernen, Ausblenden und Nachvollziehbarkeit.
-- **Deploy:** Alpine-basiertes Docker-Image (linux/amd64), gebaut per Gitea
-  Action (`.gitea/workflows/ci.yml`: erst pytest, dann Build) und in die
-  Container-Registry von `git.arianw.de` gepusht. Compose mit `env_file` und
-  Volume für `data/`.
+- **Deploy:** Alpine-basiertes Docker-Image. Zwei getrennte Pipelines:
+  auf Gitea `.gitea/workflows/ci.yml` (pytest, dann Build linux/amd64 in die
+  Container-Registry von `git.arianw.de`), auf dem GitHub-Mirror
+  `.github/workflows/docker-publish.yml` (pytest, dann Multi-Arch amd64+arm64
+  nach `ghcr.io/shrippen/paperninja`). Gitea ignoriert `.github/workflows`, sobald
+  `.gitea/workflows` existiert, GitHub kennt `.gitea` nicht. README und Compose
+  zeigen auf GHCR (öffentliche Nutzer). Compose mit `env_file` und Volume für
+  `data/`.
 
 ```
 Browser  →  PaperNinja (FastAPI)
